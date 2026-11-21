@@ -261,6 +261,43 @@ def crosscheck_table_201(raw_idx: pd.DataFrame, d1: pd.DataFrame, log: QualityLo
             "ok" if (diff <= 0.05).mean() >= 0.99 else "warning")
 
 
+def crosscheck_table_3(raw_nat: pd.DataFrame, d2: pd.DataFrame, log: QualityLog) -> pd.DataFrame:
+    """Dataset 2 vs iGA's own Table 3 (Sep 2023 publication) for the months both cover.
+
+    Returns the values that differ by more than 0.15 index points. Dataset 2
+    stays the working source (as in the proposal); differences are reported,
+    and the dashboard warns when a selection includes them.
+    """
+    cols = ["code", "name", "period", "population", "dataset2", "iga_table3", "difference"]
+    if raw_nat is None or raw_nat.empty:
+        return pd.DataFrame(columns=cols)
+    t = raw_nat.copy()
+    t["published"] = t["raw_name"].map(lambda v: labels.clean_name(v, fix_spelling=False))
+    t["code"] = [config.HEADLINE_CODE if pd.isna(c) and str(n).strip().lower() == "all divisions"
+                 else (labels.normalise_code(c) if pd.notna(c) else None)
+                 for c, n in zip(t["raw_code"], t["published"])]
+    t["iga_table3"] = _to_number(t["raw_value"])
+    t = t.dropna(subset=["code", "iga_table3", "period"])
+    m = t.merge(d2[["period", "code", "population", "index"]].dropna(), on=["period", "code", "population"])
+    if m.empty:
+        return pd.DataFrame(columns=cols)
+    m["difference"] = m["index"] - m["iga_table3"]
+    big = m[m["difference"].abs() > 0.15].copy()
+    detail = ""
+    if len(big):
+        parts = []
+        for (year, pop), g in big.groupby([big["period"].dt.year, "population"]):
+            parts.append(f"{year} {pop}: {g['code'].nunique()} series, {len(g)} values")
+        detail = "; ".join(parts) + f"; largest {big['difference'].abs().max():.1f} points"
+    log.add("D2+D3", "Dataset 2 matches iGA Table 3 (nationality, overlapping months)",
+            f"{int((m['difference'].abs() <= 0.15).sum())}/{len(m)} values",
+            detail or f"{m['period'].min():%b %Y} - {m['period'].max():%b %Y}",
+            "warning" if len(big) else "ok")
+    big = big.rename(columns={"index": "dataset2"})
+    big["name"] = big["published"]
+    return big[cols].sort_values(["population", "code", "period"]).reset_index(drop=True)
+
+
 def build_cpi_table(d1: pd.DataFrame, d2: pd.DataFrame, history: pd.DataFrame | None,
                     log: QualityLog) -> pd.DataFrame:
     """Join everything into the single tidy table used by the app and the tools."""
