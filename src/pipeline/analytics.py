@@ -176,6 +176,8 @@ def compare_categories(cpi: pd.DataFrame, period, measure: str = "yoy", codes=No
         except DataUnavailable as exc:
             rows.append({"code": code, "name": name_of(cpi, code), "value": np.nan,
                          "display": "not available", "note": str(exc)})
+    if not rows:   # nothing selected / nothing available: an empty table, not an error
+        return pd.DataFrame(columns=["code", "name", "value", "display", "note"])
     out = pd.DataFrame(rows)
     return out.sort_values("value", ascending=False, na_position="last").reset_index(drop=True)
 
