@@ -236,10 +236,14 @@ def contributions(cpi: pd.DataFrame, weights: pd.DataFrame, period) -> pd.DataFr
 # Monitoring priorities (the decision in proposal Section 1)
 # --------------------------------------------------------------------------
 def priority_table(cpi: pd.DataFrame, weights: pd.DataFrame | None, period,
-                   rules: dict | None = None) -> pd.DataFrame:
+                   rules: dict | None = None, codes=None,
+                   population: str = config.NATIONAL) -> pd.DataFrame:
     """Flag divisions on the four prioritisation criteria in the proposal.
 
-    The table shows the evidence; it does not decide. Analysts make the call.
+    Ranks ("top 3") are taken across all 12 divisions, then the table is cut
+    to the divisions in the current selection (`codes`), so it responds to the
+    filters without changing what "top 3" means. MoM / YoY / since-base use
+    the selected households. The table shows the evidence; analysts decide.
     """
     r = {**config.PRIORITY_RULES, **(rules or {})}
     p = _month(period)
@@ -249,7 +253,7 @@ def priority_table(cpi: pd.DataFrame, weights: pd.DataFrame | None, period,
         row = {"code": code, "name": name_of(cpi, code)}
         for m in ("mom", "yoy", "base"):
             try:
-                row[m] = change(cpi, code, p, m).value
+                row[m] = change(cpi, code, p, m, population).value
             except DataUnavailable:
                 row[m] = np.nan
         try:
@@ -269,8 +273,12 @@ def priority_table(cpi: pd.DataFrame, weights: pd.DataFrame | None, period,
     t["flag_nationality_gap"] = t["gap_bh_minus_nonbh"].abs() >= r["nationality_gap_min"]
     flags = [c for c in t.columns if c.startswith("flag_")]
     t["criteria_met"] = t[flags].sum(axis=1).astype(int)
+    selected = {c.split(".")[0] for c in (codes or []) if c != config.HEADLINE_CODE}
+    if selected:                       # headline only / nothing -> keep all 12 divisions
+        t = t[t["code"].isin(selected)]
     t.attrs["period"] = f"{p:%Y-%m}"
     t.attrs["rules"] = r
+    t.attrs["population"] = population
     return t.sort_values(["criteria_met", "yoy"], ascending=False).reset_index(drop=True)
 
 
@@ -301,9 +309,16 @@ def summary_figures(cpi: pd.DataFrame, f: Filters, code: str) -> dict:
             out[m] = change(cpi, code, f.end, m, f.population)
         except DataUnavailable:
             out[m] = None
+    # Change over the selected period, measured from the first month in the
+    # period that has a value (e.g. May 2019 for nationality series). The
+    # month used is returned with it, so the label always says what it is.
+    out["over_range_pct"], out["range_start"] = None, None
     try:
-        first = change(cpi, code, f.start, "index", f.population).value
-        out["over_range_pct"] = (out["index"].value / first - 1) * 100 if out["index"] else None
+        s = series(cpi, code, f.population)
+        window = s[(s.index >= _month(f.start)) & (s.index <= _month(f.end))].dropna()
+        if len(window) and out["index"] and window.index[0] < _month(f.end):
+            out["over_range_pct"] = (out["index"].value / float(window.iloc[0]) - 1) * 100
+            out["range_start"] = f"{window.index[0]:%Y-%m}"
     except DataUnavailable:
-        out["over_range_pct"] = None
+        pass
     return out

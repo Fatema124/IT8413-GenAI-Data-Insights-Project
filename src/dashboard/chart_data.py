@@ -88,3 +88,30 @@ def data_coverage(cpi: pd.DataFrame, f: A.Filters) -> dict:
     sel = A.apply_filters(cpi, f)
     return {"rows": int(len(sel)), "missing": int(sel["index"].isna().sum()),
             "months": int(sel["period"].nunique()), "categories": int(sel["code"].nunique())}
+
+
+def selection_summary(cpi: pd.DataFrame, f: A.Filters) -> pd.DataFrame:
+    """Summary figures for EVERY category in the current selection (F3)."""
+    codes, _ = usable_codes(cpi, f)
+    rows = []
+    for code in codes:
+        s = A.summary_figures(cpi, f, code)
+        rows.append({
+            "code": code, "name": s["name"],
+            "index": s["index"].value if s["index"] else np.nan,
+            "mom": s["mom"].value if s["mom"] else np.nan,
+            "yoy": s["yoy"].value if s["yoy"] else np.nan,
+            "base": s["base"].value if s["base"] else np.nan,
+            "range_start": s["range_start"] or "",
+            "over_range": s["over_range_pct"] if s["over_range_pct"] is not None else np.nan,
+        })
+    return pd.DataFrame(rows, columns=["code", "name", "index", "mom", "yoy", "base", "range_start", "over_range"])
+
+
+def flagged_in_selection(discrepancies: pd.DataFrame | None, f: A.Filters) -> pd.DataFrame:
+    """Values in the current selection where Dataset 2 differs from iGA's Table 3."""
+    if discrepancies is None or discrepancies.empty:
+        return pd.DataFrame(columns=["code", "name", "period", "population", "dataset2", "iga_table3", "difference"])
+    d = discrepancies
+    return d[(d["population"] == f.population) & d["code"].isin(f.codes)
+             & (d["period"] >= f.start) & (d["period"] <= f.end)]
