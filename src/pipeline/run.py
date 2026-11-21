@@ -29,6 +29,7 @@ class PreparedData:
     weights: pd.DataFrame | None
     labels: pd.DataFrame
     quality: pd.DataFrame
+    discrepancies: pd.DataFrame | None = None   # Dataset 2 vs iGA Table 3
 
 
 def build(raw_dir: Path | None = None, use_d3: bool = True) -> PreparedData:
@@ -38,13 +39,14 @@ def build(raw_dir: Path | None = None, use_d3: bool = True) -> PreparedData:
     d1 = prepare.prepare_d1(load.load_d1(raw_dir / config.RAW_FILES["D1"]), log)
     d2 = prepare.prepare_d2(load.load_d2(raw_dir / config.RAW_FILES["D2"]), log)
 
-    weights = history = None
+    weights = history = discrepancies = None
     d3_path = raw_dir / config.RAW_FILES["D3"]
     if use_d3 and d3_path.exists():
-        raw_w, raw_h, raw_idx = load.load_d3(d3_path)
+        raw_w, raw_h, raw_idx, raw_nat = load.load_d3(d3_path)
         weights = prepare.prepare_weights(raw_w, log)
         history = prepare.prepare_history(raw_h, d1, log)
         prepare.crosscheck_table_201(raw_idx, d1, log)
+        discrepancies = prepare.crosscheck_table_3(raw_nat, d2, log)
     else:
         log.add("D3", "Dataset 3 loaded", "no", f"{d3_path.name} not found - weights unavailable", "warning")
 
@@ -53,7 +55,7 @@ def build(raw_dir: Path | None = None, use_d3: bool = True) -> PreparedData:
         prepare.weighted_headline_check(cpi, weights, log)
     log.add("All", "Prepared rows", len(cpi),
             ", ".join(f"{k}: {v}" for k, v in cpi.groupby("source").size().items()))
-    return PreparedData(cpi, weights, prepare.labels_table(cpi, weights), log.to_frame())
+    return PreparedData(cpi, weights, prepare.labels_table(cpi, weights), log.to_frame(), discrepancies)
 
 
 def write_outputs(data: PreparedData, out_dir: Path | None = None) -> Path:
@@ -64,6 +66,8 @@ def write_outputs(data: PreparedData, out_dir: Path | None = None) -> Path:
     if data.weights is not None:
         data.weights.to_csv(out / "weights.csv", index=False)
     data.quality.to_csv(out / "quality_report.csv", index=False)
+    if data.discrepancies is not None:
+        data.discrepancies.to_csv(out / "source_discrepancies.csv", index=False, date_format="%Y-%m")
     (out / "quality_report.md").write_text(quality_markdown(data.quality), encoding="utf-8")
     (out / "manifest.json").write_text(json.dumps({
         "built_at": datetime.now().isoformat(timespec="seconds"),
@@ -96,7 +100,12 @@ def load_prepared(processed_dir: Path | None = None) -> PreparedData:
     weights = pd.read_csv(w_path, dtype={"code": str, "division": str}) if w_path.exists() else None
     labels = pd.read_csv(d / "labels.csv", dtype={"code": str, "division": str})
     quality = pd.read_csv(d / "quality_report.csv")
-    return PreparedData(cpi, weights, labels, quality)
+    disc_path = d / "source_discrepancies.csv"
+    disc = None
+    if disc_path.exists():
+        disc = pd.read_csv(disc_path, dtype={"code": str})
+        disc["period"] = pd.to_datetime(disc["period"], format="%Y-%m")
+    return PreparedData(cpi, weights, labels, quality, disc)
 
 
 def main(argv=None) -> None:
