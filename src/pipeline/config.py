@@ -155,6 +155,7 @@ D3_BYTES = 228243
 
 # Dataset 3 sheets. None = find automatically by searching cell text.
 D3_WEIGHTS_SHEET: str | None = "2.01"  # Table 2.01: 'Expenditure Weights' column
+D3_NATIONALITY_SHEET: str | None = "3"  # Table 3: index by nationality (cross-check of Dataset 2)
 D3_HISTORY_SHEET: str | None = "1"     # Table 1: headline CPI, monthly from Jan 2011
 D3_HISTORY_KEEP = ("2011-01", "2016-12")  # only these rows are used (proposal)
 

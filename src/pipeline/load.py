@@ -310,8 +310,42 @@ def load_d3_index_table(book: dict[str, pd.DataFrame]) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["raw_code", "raw_name", "period", "raw_value"])
 
 
-def load_d3(path: Path | None = None) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Weights, headline history and the Table 2.01 index numbers."""
+def load_d3_nationality_table(book: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """Table 3: division index by nationality (a date row, then a Bahraini /
+    Non-Bahraini row under it) -> long. Used only to cross-check Dataset 2."""
+    cols = ["raw_code", "raw_name", "period", "population", "raw_value"]
+    sheet = config.D3_NATIONALITY_SHEET
+    if not sheet or sheet not in book:
+        return pd.DataFrame(columns=cols)
+    raw = book[sheet]
+    hdr = next((i for i in range(min(20, len(raw)))
+                if sum(parse_period_text(v) is not None for v in raw.iloc[i].values if pd.notna(v)) >= 6), None)
+    if hdr is None or hdr + 1 >= len(raw):
+        return pd.DataFrame(columns=cols)
+    dates, nats = list(raw.iloc[hdr].values), list(raw.iloc[hdr + 1].values)
+    code_j = next((j for j, h in enumerate(raw.iloc[hdr].values) if "code" in str(h).lower()), 0)
+    name_j = next((j for j, h in enumerate(raw.iloc[hdr].values) if "division" in str(h).lower()), 2)
+    columns, current = [], None
+    for j in range(len(dates)):
+        p = parse_period_text(dates[j]) if pd.notna(dates[j]) else None
+        if p is not None:
+            current = p
+        label = str(nats[j]).strip().lower()
+        if current is not None and label in config.NATIONALITY_MAP:
+            columns.append((j, current, config.NATIONALITY_MAP[label]))
+    rows = []
+    for i in range(hdr + 2, len(raw)):
+        code, name = raw.iat[i, code_j], raw.iat[i, name_j]
+        if pd.isna(code) and pd.isna(name):
+            continue
+        for j, period, pop in columns:
+            rows.append((code, name, period, pop, raw.iat[i, j]))
+    return pd.DataFrame(rows, columns=cols)
+
+
+def load_d3(path: Path | None = None):
+    """Weights, headline history, Table 2.01 index numbers and Table 3 (nationality)."""
     path = path or config.RAW_DIR / config.RAW_FILES["D3"]
     book = pd.read_excel(path, sheet_name=None, header=None, dtype=object)
-    return load_d3_weights(book), load_d3_history(book), load_d3_index_table(book)
+    return (load_d3_weights(book), load_d3_history(book), load_d3_index_table(book),
+            load_d3_nationality_table(book))
