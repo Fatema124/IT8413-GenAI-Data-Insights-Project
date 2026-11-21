@@ -109,7 +109,34 @@ def make_d2(path: Path) -> None:
     df.to_csv(path, index=False)
 
 
-def make_d3(path: Path, d1_path: Path) -> None:
+def _table3(d2_path: Path) -> list[list]:
+    """iGA Table 3 layout: a date row (each date over two columns), then a nationality row.
+    One value is changed on purpose (Non-Bahraini transport, Jan 2022) to test the cross-check."""
+    d2 = pd.read_csv(d2_path, dtype=str)
+    d2.columns = [" ".join(c.split()) for c in d2.columns]
+    d2["period"] = pd.to_datetime(d2["Year"] + "-" + d2["Month"].str[:2] + "-01")
+    months = pd.date_range("2020-01-01", "2023-10-01", freq="MS")
+    date_row, nat_row = ["Code", "Level", "COICOP \nDivision & Group"], [None, None, None]
+    for p in months:
+        date_row += [p, None]
+        nat_row += ["Bahraini", "Non-Bahraini"]
+    rows = [["Table 3"], ["Consumers price index, division- index numbers by nationality"], [None], [None],
+            [None], [None], date_row, nat_row]
+    for code in D2_CODES:
+        name = "All Divisions" if code == "0" else NAMES[code]
+        row = [None if code == "0" else code, None if code == "0" else 2, name]
+        for p in months:
+            for nat in ("Bahraini", "Non-Bahraini"):
+                v = float(d2[(d2["COICOP Code"] == code) & (d2["Nationality"] == nat) & (d2["period"] == p)]["Point"].iloc[0])
+                if code == "07" and nat == "Non-Bahraini" and p == pd.Timestamp("2022-01-01"):
+                    v -= 40.0                       # planted discrepancy
+                row.append(v)
+        rows.append(row)
+    width = max(len(r) for r in rows)
+    return [r + [None] * (width - len(r)) for r in rows]
+
+
+def make_d3(path: Path, d1_path: Path, d2_path: Path | None = None) -> None:
     d1 = pd.read_csv(d1_path, dtype=str)
     d1.columns = [" ".join(c.split()) for c in d1.columns]
     d1["period"] = pd.to_datetime(d1["Year"] + "-" + d1["Month"].str[:2] + "-01")
@@ -151,6 +178,8 @@ def make_d3(path: Path, d1_path: Path) -> None:
             xl, sheet_name="Contents", header=False, index=False)
         pd.DataFrame(t1).to_excel(xl, sheet_name="1", header=False, index=False)
         pd.DataFrame(t2).to_excel(xl, sheet_name="2.01", header=False, index=False)
+        if d2_path is not None:
+            pd.DataFrame(_table3(d2_path)).to_excel(xl, sheet_name="3", header=False, index=False)
 
 
 def make_all(raw_dir: Path) -> Path:
@@ -158,6 +187,7 @@ def make_all(raw_dir: Path) -> Path:
     from src.pipeline import config
     d1 = raw_dir / config.RAW_FILES["D1"]
     make_d1(d1)
-    make_d2(raw_dir / config.RAW_FILES["D2"])
-    make_d3(raw_dir / config.RAW_FILES["D3"], d1)
+    d2 = raw_dir / config.RAW_FILES["D2"]
+    make_d2(d2)
+    make_d3(raw_dir / config.RAW_FILES["D3"], d1, d2)
     return raw_dir

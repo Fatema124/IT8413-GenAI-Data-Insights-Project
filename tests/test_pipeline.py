@@ -155,7 +155,7 @@ def test_contributions_cover_divisions(data):
 
 
 # ---------------------------------------------------------------- answer checker
-PLANTED_QUESTIONS = {8, 10, 12, 13, 23, 26, 28, 30}
+PLANTED_QUESTIONS = {8, 10, 12, 13, 16, 19, 20, 23, 26, 28, 30}
 
 
 def test_dev_checker_passes_on_planted_values(data):
@@ -165,8 +165,13 @@ def test_dev_checker_passes_on_planted_values(data):
 
 
 def test_checker_excludes_held_out():
-    held_out = {1, 3, 5, 9, 11, 14, 15, 17, 18, 22, 24, 27, 29, 31}
+    held_out = {1, 3, 5, 7, 9, 11, 14, 15, 17, 18, 22, 24, 27, 29, 31}
     assert not {c.question for c in check_dev_answers.CHECKS} & held_out
+
+
+def test_checker_covers_every_development_question_that_uses_data():
+    data_dev = {8, 10, 12, 13, 16, 19, 20, 21, 23, 26, 28, 30}   # 2, 4, 6, 25 are document-only
+    assert {c.question for c in check_dev_answers.CHECKS} == data_dev
 
 
 # ---------------------------------------------------------------- dashboard data (F2/F3)
@@ -225,3 +230,65 @@ def test_headline_history_reaches_2011(data):
     s = A.series(data.cpi, "0")
     assert s.index.min() == pd.Timestamp("2011-01-01")
     assert "Dataset 3" in A.change(data.cpi, "0", "2017-01", "yoy").sources
+
+
+# ---------------------------------------------------------------- empty selections (bug found in fresh test)
+def test_comparison_with_nothing_available_is_empty_not_error(data):
+    f = A.Filters(pd.Timestamp("2023-09-01"), pd.Timestamp("2026-08-01"), ["01.1"], "Non-Bahraini", "yoy")
+    out = cd.comparison(data.cpi, f)
+    assert out.empty and "value" in out.columns
+    assert cd.trend(data.cpi, f).empty
+
+
+def test_labels_record_which_households_have_each_code(data):
+    nat_only = data.labels.loc[data.labels["code"] == "01.1", "populations"].item()
+    assert "Non-Bahraini" not in nat_only
+    assert "Non-Bahraini" in data.labels.loc[data.labels["code"] == "01", "populations"].item()
+
+
+# ---------------------------------------------------------------- every display responds to filters (F2)
+def test_priority_table_follows_category_and_household_filters(data):
+    full = A.priority_table(data.cpi, data.weights, "2026-08")
+    some = A.priority_table(data.cpi, data.weights, "2026-08", codes=["0", "01", "04.5"])
+    assert set(some["code"]) == {"01", "04"}
+    # ranks are taken across all 12 divisions, so a flag never changes when rows are hidden
+    merged = some.merge(full, on="code", suffixes=("", "_all"))
+    assert (merged["flag_rising_fastest"] == merged["flag_rising_fastest_all"]).all()
+    bh = A.priority_table(data.cpi, data.weights, "2026-08", population="Bahraini")
+    assert bh.set_index("code")["yoy"].round(4).to_dict() != full.set_index("code")["yoy"].round(4).to_dict()
+
+
+def test_summary_covers_every_selected_category(data, filt):
+    out = cd.selection_summary(data.cpi, filt)
+    assert list(out["code"]) == ["0", "01", "04.5"]
+    assert out.loc[out["code"] == "04.5", "yoy"].item() == pytest.approx(
+        A.change(data.cpi, "04.5", "2026-08", "yoy").value)
+
+
+def test_change_over_period_starts_at_first_month_with_data(data):
+    f = A.Filters(pd.Timestamp("2011-01-01"), pd.Timestamp("2026-08-01"), ["0", "01"], "Non-Bahraini", "yoy")
+    out = cd.selection_summary(data.cpi, f).set_index("code")
+    assert out.loc["0", "range_start"] == "2019-05"           # nationality data start, not Jan 2011
+    expected = (A.index_value(data.cpi, "0", "2026-08", "Non-Bahraini")
+                / A.index_value(data.cpi, "0", "2019-05", "Non-Bahraini") - 1) * 100
+    assert out.loc["0", "over_range"] == pytest.approx(expected)
+
+
+# ---------------------------------------------------------------- Dataset 2 vs iGA Table 3
+def test_table3_crosscheck_finds_the_planted_discrepancy(data):
+    d = data.discrepancies
+    assert len(d) == 1
+    row = d.iloc[0]
+    assert (row["code"], row["population"], f"{row['period']:%Y-%m}") == ("07", "Non-Bahraini", "2022-01")
+    assert row["difference"] == pytest.approx(40.0, abs=0.01)
+    q = data.quality.set_index("check")
+    assert q.loc["Dataset 2 matches iGA Table 3 (nationality, overlapping months)", "status"] == "warning"
+
+
+def test_dashboard_flags_only_selections_that_include_the_discrepancy(data):
+    hit = A.Filters(pd.Timestamp("2021-06-01"), pd.Timestamp("2022-06-01"), ["0", "07"], "Non-Bahraini", "yoy")
+    miss = A.Filters(pd.Timestamp("2023-06-01"), pd.Timestamp("2026-08-01"), ["0", "07"], "Non-Bahraini", "yoy")
+    other = A.Filters(pd.Timestamp("2021-06-01"), pd.Timestamp("2022-06-01"), ["0", "07"], "Bahraini", "yoy")
+    assert len(cd.flagged_in_selection(data.discrepancies, hit)) == 1
+    assert cd.flagged_in_selection(data.discrepancies, miss).empty
+    assert cd.flagged_in_selection(data.discrepancies, other).empty
