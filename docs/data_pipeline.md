@@ -105,7 +105,7 @@ The full log is in `docs/quality_report.md`.
 
 | Filter | Options |
 |---|---|
-| Time period | Any range of months, Jan 2017 - Aug 2026 |
+| Time period | Any range of months, Jan 2011 - Aug 2026 (before 2017: headline only, from Dataset 3) |
 | Households | National, Bahraini, Non-Bahraini |
 | Category level and categories | Headline, divisions, groups and items |
 | Measure | Year-on-year, month-on-month, since April 2019, index level |
@@ -147,4 +147,10 @@ questions are not run before the final evaluation (brief Section 7.1).
 ## 7. Licence handling
 Datasets 1-2 (Bahrain Open Government Data License v1.0) may be committed with attribution; the
 attribution statement and extraction date are shown under the dashboard. Dataset 3 (iGA Terms of Use) is
-not committed: `data/raw/*.xlsx` and `data/processed/` are git-ignored and rebuilt by `run.py`.
+not committed: `data/raw/*.xlsx` and `data/processed/` are git-ignored. `python -m scripts.download_sources`
+fetches Dataset 3 from iGA and checks its SHA-256 fingerprint against the group's copy, so a changed file is
+reported rather than silently used. The working datasets are submitted to the tutor on Moodle (proposal Section 2).
+
+Dataset 3 is used inside the tool: the expenditure weights (chart 3, contributions, the priority table) and the
+headline from January 2011 (chart 1 and the KPIs when the period starts before 2017). The "Data sources" panel
+under the dashboard lists all three datasets with their terms.

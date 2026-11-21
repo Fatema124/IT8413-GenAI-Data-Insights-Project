@@ -49,7 +49,7 @@ def sidebar_filters(data: PreparedData) -> tuple[A.Filters, bool]:
     cpi, lab = data.cpi, data.labels
     st.sidebar.header("Filters")
 
-    months = sorted(cpi.loc[cpi["source"] != "D3", "period"].unique())
+    months = sorted(cpi["period"].unique())          # Jan 2011 (Dataset 3) - Aug 2026
     start, end = st.sidebar.select_slider(
         "Time period", options=months, value=(months[-36], months[-1]),
         format_func=lambda p: pd.Timestamp(p).strftime("%b %Y"), key="f_period")
@@ -137,7 +137,8 @@ def chart_comparison(data: PreparedData, f: A.Filters, by_nat: bool) -> None:
 def chart_composition(data: PreparedData, f: A.Filters) -> None:
     st.subheader("3 - Composition of the basket")
     if data.weights is None:
-        st.warning("Expenditure weights (Dataset 3) are not loaded.")
+        st.warning("Expenditure weights (Dataset 3) are not loaded. Run `python -m scripts.download_sources`, "
+                   "or save iGA's CPI tables XLSX in data/raw/, then `python -m src.pipeline.run`.")
         return
     try:
         df = cd.composition(data.cpi, data.weights, f)
@@ -199,6 +200,9 @@ def priority_section(data: PreparedData, f: A.Filters) -> None:
 def render_dashboard(data: PreparedData | None = None) -> A.Filters:
     data = data or _load()
     f, by_nat = sidebar_filters(data)
+    if f.start < pd.Timestamp("2017-01-01"):
+        st.info("Before January 2017 only the headline CPI is available (Dataset 3, iGA Table 1). "
+                "Divisions and groups start in January 2017 (Dataset 1).")
     _, dropped = cd.usable_codes(data.cpi, f)
     if dropped:
         st.info(f"{', '.join(dropped)}: no {f.population} series (nationality figures cover the headline "
@@ -212,6 +216,13 @@ def render_dashboard(data: PreparedData | None = None) -> A.Filters:
         chart_heatmap(data, f)
     chart_composition(data, f)
     priority_section(data, f)
+    with st.expander("Data sources"):
+        _show(st.dataframe, pd.DataFrame([
+            {"Dataset": k, "Title": v["title"], "Publisher": v["publisher"], "Used for": use,
+             "Coverage": v["coverage"], "Retrieved": v["retrieved"], "Terms": v["licence"]}
+            for (k, v), use in zip(config.SOURCES.items(), [
+                "National index, all 69 categories", "Bahraini vs non-Bahraini index",
+                "Expenditure weights (Table 2.01), headline 2011-2016 (Table 1)"])]), hide_index=True)
     with st.expander("Data preparation checks (F1)"):
         _show(st.dataframe, data.quality, hide_index=True)
     st.caption(config.ATTRIBUTION)

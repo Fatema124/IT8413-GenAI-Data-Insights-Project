@@ -212,3 +212,16 @@ def test_changing_end_month_changes_every_chart(data, filt):
     b = (cd.comparison(data.cpi, filt)["value"].tolist(),
          cd.composition(data.cpi, data.weights, filt)["contribution_pts"].dropna().tolist())
     assert a[0] != b[0] and a[1] != b[1]
+
+
+# ---------------------------------------------------------------- Dataset 3 download check
+def test_download_check_accepts_expected_layout(tmp_path):
+    from scripts import download_sources
+    raw = make_all(tmp_path / "raw")
+    assert download_sources.check(raw / config.RAW_FILES["D3"])   # sheets present; hash differs -> warning only
+
+
+def test_headline_history_reaches_2011(data):
+    s = A.series(data.cpi, "0")
+    assert s.index.min() == pd.Timestamp("2011-01-01")
+    assert "Dataset 3" in A.change(data.cpi, "0", "2017-01", "yoy").sources
