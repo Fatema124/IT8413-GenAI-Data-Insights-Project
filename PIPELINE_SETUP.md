@@ -21,7 +21,7 @@ The pipeline keeps data only up to August 2026 (`DATA_END` in config.py), so a l
 pip install -r requirements.txt
 python -m src.pipeline.inspect_raw      # check the column mapping printed for D1, D2 and the D3 sheets
 python -m src.pipeline.run              # builds data/processed/ and quality_report.md
-python -m scripts.check_dev_answers     # 19/19 PASS on the real data (checked 19/11/2026)
+python -m scripts.check_dev_answers     # 31/31 PASS on the real data (all 12 data development questions)
 python -m pytest -q                     # expect all tests to pass
 streamlit run src/dashboard/page.py
 ```

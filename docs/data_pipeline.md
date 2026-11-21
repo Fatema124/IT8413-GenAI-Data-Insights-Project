@@ -69,6 +69,7 @@ Dataset 3 adds the weights (Table 2.01) and the headline for 2011-2016.
 | April 2019 = 100 is checked for every national series. | Confirms all series share the base. |
 | Weights are read as % of the basket; if stored as shares they are converted (×100). Division weights must add up to 100%. | Wrong units would make contributions 100 times too small or large. |
 | Every Dataset 1 value is compared with iGA's own Table 2.01 (Jan 2017 - Oct 2023): **5,574 of 5,574 values match.** | Independent confirmation that the portal file and the publication agree. |
+| Dataset 2 is compared with iGA's Table 3 (nationality index, Jan 2020 - Oct 2023): **1,017 of 1,196 values match**. The 179 that differ are all in **2022**: every non-Bahraini division and 8 Bahraini divisions (largest gap 59 points; e.g. non-Bahraini transport, Jan 2022: Dataset 2 145.7, Table 3 107.8). Table 3's divisions add up to the published headline; Dataset 2's 2022 divisions do not (Mar 2022: 103.7 vs headline 100.1). | The portal values for these months are very likely wrong. Dataset 2 stays the working source (proposal), every affected value is listed in `source_discrepancies.csv`, and the dashboard warns whenever a selection includes one. Whether to replace them with Table 3 is a group decision, because it could change ground-truth answers. |
 | Table 1's headline is compared with Dataset 1: the 12 months of 2020 differ (by up to 3.0 points), while Table 2.01 and Table 1's own 2020 annual average (97.6) agree with Dataset 1. Only Table 1's 2011-2016 rows are used. | The inconsistency is inside iGA's file and does not touch the rows we use. |
 | All computed figures are labelled as the group's own analysis. | Licence clause 3.3(b). |
 
@@ -97,7 +98,9 @@ at the version retrieved on 13/10/2026 so every ground-truth answer stays reprod
 | Division weights | add up to 100.00% (Housing 25.02%, Transport 17.84%) |
 | Weighted divisions vs headline | mean gap 0.09 index points |
 | Contributions, Aug 2026 | sum +2.97 pts vs published headline YoY +2.93% |
-| Development-set data answers | **19/19 checks pass** (questions 8, 10, 12, 13, 21, 23, 26, 28, 30) |
+| Dataset 2 vs iGA Table 3 | 1,017/1,196 match; 179 differ, all in 2022 (see 3.2) |
+| Our MoM / YoY vs iGA's published percentages (Tables 2.02, 2.03) | 4,744/4,746 and 4,777/4,779 reproduced within 0.1 pt; the 4 exceptions are errors in iGA's tables (e.g. 904.46% printed for a move from 99.0 to 99.4) |
+| Development-set data answers | **31/31 checks pass**: every development question that uses the datasets (8, 10, 12, 13, 21, 23, 26, 28, 30 answered; 16, 19, 20 correctly declined) |
 
 The full log is in `docs/quality_report.md`.
 
@@ -118,12 +121,12 @@ When a nationality is selected, groups and items (national only) are left out an
 
 | # | Visualisation | Type the brief asks for | Responds to |
 |---|---|---|---|
-| KPIs | Index, MoM, YoY, since base, change over the range for the first selected category | Summary figures | all filters |
+| KPIs + summary table | Index, MoM, YoY, since base and change over the range for every selected category | Summary figures | all filters |
 | 1 | Line chart of the measure over time | Change over time | period, categories, households, measure |
 | 2 | Bar chart of the measure at the end month (optionally National vs Bahraini vs non-Bahraini) | Comparison between categories | all filters |
-| 3 | Basket weights (donut) and contribution of each division to headline YoY | Composition | categories, end month |
+| 3 | Basket weights (donut) and contribution of each division to headline YoY | Composition | categories, end month (weights exist for the national basket only, stated on screen) |
 | 4 | Heatmap of the measure by category and month | Distribution | all filters |
-| + | Monitoring priorities table: each division against the four criteria in the proposal | Supports the decision | end month |
+| + | Monitoring priorities table: each division against the four criteria in the proposal | Supports the decision | categories, households, end month (ranks across all 12 divisions) |
 
 **Contribution** (chart 3) = weight × (index now − index a year ago) ÷ headline a year ago, in percentage
 points. It is an approximation; the sum is shown next to the published headline change so the gap is visible.
@@ -137,11 +140,13 @@ weight ≥ 10%; Bahraini − non-Bahraini YoY gap ≥ 1.0 pt. The table shows ev
 python -m src.pipeline.inspect_raw     # 1. look at the raw files and the column mapping
 python -m src.pipeline.run             # 2. build data/processed/ + quality_report.md
 python -m scripts.check_dev_answers    # 3. development-set data answers vs the proposal
+python -m scripts.check_against_iga    #    our % changes vs iGA's own published % changes
 python -m pytest -q                    # 4. unit tests (synthetic files with the same quirks)
 streamlit run src/dashboard/page.py    # 5. the dashboard on its own
 ```
 
-`check_dev_answers` covers only development questions (8, 10, 12, 13, 21, 23, 26, 28, 30). Held-out
+`check_dev_answers` covers every development question that uses the datasets (8, 10, 12, 13, 16, 19, 20, 21, 23, 26, 28, 30;
+questions 2, 4, 6 and 25 use only the documents). Held-out
 questions are not run before the final evaluation (brief Section 7.1).
 
 ## 7. Licence handling
