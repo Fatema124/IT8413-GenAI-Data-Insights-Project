@@ -23,7 +23,7 @@ data/raw/                      src/pipeline/                         data/proces
 
 | Step | File | What it does |
 |---|---|---|
-| 1 Read | `load.py` | Reads each file as published. Fixes only what stops it being read: line breaks in headers, `;` delimiter, months laid out as columns in Dataset 3. |
+| 1 Read | `load.py` | Reads each file as published, without changing any value. Fixes only what stops it being read: line breaks in headers, `;` delimiter, months laid out as columns in Dataset 3. |
 | 2 Prepare | `prepare.py` | Every real decision about missing values, units and labels (Section 3). Logs each check. |
 | 3 Join and save | `run.py` | Joins Datasets 1-3 into one long table and writes the outputs and the quality report. |
 | 4 Compute | `analytics.py` | Month-on-month, year-on-year and since-base changes, annual averages, comparisons, weights, contributions, priorities. |
@@ -49,6 +49,18 @@ The shared dimensions that let the datasets be analysed together are **month** a
 Dataset 3 adds the weights (Table 2.01) and the headline for 2011-2016.
 
 ## 3. Preparation decisions (what F1 asks for)
+
+**What the pipeline changes.** Every published value is used as stored, except in these documented cases:
+
+| Change | Scale | Why |
+|---|---|---|
+| Published **0.0** values are set to **missing** | 84 values: 04.2 Imputed rentals, 11.2 Accommodation, 12.4 Social protection, Jan 2017 - Apr 2019 | An index cannot be 0; iGA's notes say these series start in May 2019 (3.1) |
+| Rows after **August 2026** are **dropped** | 95 rows: September 2026 (69 in Dataset 1, 26 in Dataset 2) | The proposal and its ground truth cover January 2017 - August 2026 (3.1) |
+| Dataset 3 Table 1 is used only for **2011-2016** | 72 headline months kept | Its 2020 rows disagree with iGA's own Table 2.01 and with Dataset 1 (3.2) |
+| COICOP codes and labels are standardised | 1,599 codes re-padded; headline labels unified; one name per code | Joins and display only; **no value changes** (3.3) |
+
+Nothing is filled, interpolated or replaced from another source. The 179 Dataset 2 values that differ from iGA's
+Table 3 are kept as published and flagged (3.2).
 
 ### 3.1 Missing values
 | Decision | Why |
