@@ -27,7 +27,7 @@ import streamlit as st
 from src.dashboard import chart_data as cd
 from src.pipeline import analytics as A
 from src.pipeline import config
-from src.pipeline.run import PreparedData, load_prepared
+from src.pipeline.run import PreparedData, build, load_prepared, write_outputs
 
 MEASURE_LABELS = {"yoy": "Year-on-year %", "mom": "Month-on-month %",
                   "base": "Change since Apr 2019 %", "index": "Index (Apr 2019 = 100)"}
@@ -92,9 +92,22 @@ def _series_scale(codes: list[str], names: dict[str, str]) -> alt.Scale:
     return alt.Scale(domain=domain, range=colours)
 
 
-@st.cache_data(show_spinner="Loading prepared CPI data...")
+@st.cache_data(show_spinner="Preparing the CPI data (the first start on a new server takes about a minute)...")
 def _load() -> PreparedData:
-    return load_prepared()
+    """Use the prepared data; on a fresh server (e.g. Streamlit Cloud) build it first.
+
+    data/processed/ is not in the repository, so a new server prepares it here:
+    Dataset 3 is fetched from iGA (it may not be republished in the repository),
+    then the same pipeline as `python -m src.pipeline.run` runs once.
+    """
+    try:
+        return load_prepared()
+    except FileNotFoundError:
+        from scripts.download_sources import ensure_dataset3
+        ensure_dataset3(verbose=False)
+        data = build()
+        write_outputs(data)
+        return data
 
 
 # --------------------------------------------------------------------------
@@ -244,8 +257,10 @@ def chart_comparison(data: PreparedData, f: A.Filters, by_nat: bool) -> None:
 def chart_composition(data: PreparedData, f: A.Filters) -> None:
     st.subheader("Composition of the basket")
     if data.weights is None:
-        st.warning("Expenditure weights (Dataset 3) are not loaded. Run `python -m scripts.download_sources`, "
-                   "or save iGA's CPI tables XLSX in data/raw/, then `python -m src.pipeline.run`.")
+        st.warning("Expenditure weights (Dataset 3) are not loaded. Dataset 3 may not be republished, so it is "
+                   "not in the repository: save iGA's CPI tables XLSX as data/raw/CPI-Tables-_Jan2020-Oct_2023.xlsx "
+                   "(or run `python -m scripts.download_sources`), then `python -m src.pipeline.run`. On the online "
+                   "version this means the file could not be fetched from iGA's website.")
         return
     try:
         comp = A.contributions(data.cpi, data.weights, f.end)

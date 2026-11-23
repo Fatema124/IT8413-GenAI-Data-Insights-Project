@@ -45,25 +45,50 @@ def check(path: Path) -> bool:
     return True
 
 
-def main() -> int:
+def ensure_dataset3(verbose: bool = True) -> tuple[bool, str]:
+    """Make sure Dataset 3 is in data/raw/: use it if present, else download it from iGA.
+
+    Returns (available, message). Used by this script and by the app when it
+    starts on a server where the file is not present (e.g. Streamlit Cloud).
+    A downloaded file that is not the expected workbook is deleted again.
+    """
+    say = print if verbose else (lambda *a, **k: None)
     target = config.RAW_DIR / config.RAW_FILES["D3"]
-    print(f"Dataset 3 -> {target}")
+    say(f"Dataset 3 -> {target}")
     if target.exists():
-        print("  Already present.")
-        return 0 if check(target) else 1
+        say("  Already present.")
+        return check(target), "present"
     if not config.D3_DOWNLOAD_URL:
-        print("  No direct link set. Download it by hand:\n"
-              f"  1. Open {config.D3_PAGE_URL}\n"
-              "  2. Economic Statistics -> Consumer Price Index -> September 2023 release\n"
-              "  3. Download 'Consumer Price Index - Tables, January 2020 - October 2023' (XLSX)\n"
-              f"  4. Save it as {target}")
-        return 1
-    target.parent.mkdir(parents=True, exist_ok=True)
-    req = urllib.request.Request(config.D3_DOWNLOAD_URL, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        target.write_bytes(resp.read())
-    print(f"  Downloaded {target.stat().st_size:,} bytes.")
-    return 0 if check(target) else 1
+        say("  No direct link set. Download it by hand:\n"
+            f"  1. Open {config.D3_PAGE_URL}\n"
+            "  2. Economic Statistics -> Consumer Price Index -> September 2023 release\n"
+            "  3. Download 'Consumer Price Index - Tables, January 2020 - October 2023' (XLSX)\n"
+            f"  4. Save it as {target}")
+        return False, "no download link set"
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        req = urllib.request.Request(config.D3_DOWNLOAD_URL, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            target.write_bytes(resp.read())
+        say(f"  Downloaded {target.stat().st_size:,} bytes from iGA.")
+    except Exception as exc:          # network blocked, site down, moved file ...
+        target.unlink(missing_ok=True)
+        say(f"  Download failed: {exc}")
+        return False, f"download failed ({exc.__class__.__name__})"
+    try:
+        ok = check(target)
+    except Exception as exc:          # not an Excel workbook (e.g. an HTML error page)
+        say(f"  The downloaded file is not the expected workbook: {exc}")
+        ok = False
+    if not ok:
+        target.unlink(missing_ok=True)
+        return False, "downloaded file was not the expected workbook"
+    return True, "downloaded"
+
+
+def main() -> int:
+    ok, _ = ensure_dataset3()
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

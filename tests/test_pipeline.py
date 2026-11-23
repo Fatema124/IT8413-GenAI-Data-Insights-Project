@@ -292,3 +292,22 @@ def test_dashboard_flags_only_selections_that_include_the_discrepancy(data):
     assert len(cd.flagged_in_selection(data.discrepancies, hit)) == 1
     assert cd.flagged_in_selection(data.discrepancies, miss).empty
     assert cd.flagged_in_selection(data.discrepancies, other).empty
+
+
+# ---------------------------------------------------------------- fresh server (Streamlit Cloud)
+def test_dataset3_is_fetched_from_a_link_and_checked(tmp_path, monkeypatch):
+    from scripts import download_sources
+    src = make_all(tmp_path / "src") / config.RAW_FILES["D3"]
+    monkeypatch.setattr(config, "RAW_DIR", tmp_path / "server_raw")
+    monkeypatch.setattr(config, "D3_DOWNLOAD_URL", src.resolve().as_uri())
+    ok, msg = download_sources.ensure_dataset3(verbose=False)
+    assert ok and msg == "downloaded" and (tmp_path / "server_raw" / config.RAW_FILES["D3"]).exists()
+
+
+def test_failed_download_leaves_no_file_and_does_not_crash(tmp_path, monkeypatch):
+    from scripts import download_sources
+    monkeypatch.setattr(config, "RAW_DIR", tmp_path / "server_raw")
+    monkeypatch.setattr(config, "D3_DOWNLOAD_URL", (tmp_path / "missing.xlsx").as_uri())
+    ok, msg = download_sources.ensure_dataset3(verbose=False)
+    assert not ok and "failed" in msg
+    assert not (tmp_path / "server_raw" / config.RAW_FILES["D3"]).exists()
