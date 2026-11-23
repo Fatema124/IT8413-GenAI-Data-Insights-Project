@@ -6,7 +6,7 @@
 
 IT8413 Generative AI for Data Insights · Group G2 · Bahrain Polytechnic
 
-[![Open the live app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://pricelens-bh.streamlit.app/)
+[![Open the live app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://YOUR-APP.streamlit.app)
 
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-app-FF4B4B?logo=streamlit&logoColor=white)
