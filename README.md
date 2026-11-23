@@ -6,7 +6,7 @@
 
 IT8413 Generative AI for Data Insights · Group G2 · Bahrain Polytechnic
 
-[![Open the live app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://YOUR-APP.streamlit.app)
+[![Open the live app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://pricelens-bh.streamlit.app)
 
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-app-FF4B4B?logo=streamlit&logoColor=white)
@@ -14,7 +14,7 @@ IT8413 Generative AI for Data Insights · Group G2 · Bahrain Polytechnic
 ![Development checks](https://img.shields.io/badge/development%20checks-31%2F31-2ea44f)
 ![Data](https://img.shields.io/badge/data-iGA%20Bahrain-2a78d6)
 
-[**Live app**](https://YOUR-APP.streamlit.app) · [**Status**](#%EF%B8%8F-project-status) · [**Quick start**](#-quick-start) · [**How it works**](#-how-it-works) · [**Data**](#%EF%B8%8F-data) · [**Team**](#-team)
+[**Live app**](https://pricelens-bh.streamlit.app) · [**Status**](#%EF%B8%8F-project-status) · [**Quick start**](#-quick-start) · [**How it works**](#-how-it-works) · [**Data**](#%EF%B8%8F-data) · [**Team**](#-team)
 
 <img src="docs/images/dashboard.png" alt="PriceLens BH dashboard: filters, summary figures and a data caution" width="900">
 
@@ -59,7 +59,7 @@ The held-out test questions are never run before the final evaluation.
 
 ## 🚀 Quick start
 
-> **Online:** just open the [live app](https://YOUR-APP.streamlit.app). The steps below are for running it on your own computer.
+> **Online:** just open the [live app](https://pricelens-bh.streamlit.app/). The steps below are for running it on your own computer.
 
 **You need:** Python 3.10 or newer ([python.org](https://www.python.org/downloads/); on Windows tick **"Add python.exe to PATH"**).
 
