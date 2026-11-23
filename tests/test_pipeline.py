@@ -204,18 +204,18 @@ def test_comparison_uses_end_month(data, filt):
     assert set(by_nat["group"]) == {"National", "Bahraini", "Non-Bahraini"}
 
 
-def test_composition_responds_to_selection(data, filt):
-    comp = cd.composition(data.cpi, data.weights, filt)
-    assert set(comp["code"]) == {"01", "04", "rest"}          # 04.5 belongs to division 04
-    assert comp["weight"].sum() == pytest.approx(100, abs=0.1)
+def test_basket_highlights_the_selection(data, filt):
+    comp = cd.basket(data.cpi, data.weights, filt)
+    assert len(comp) == 12 and comp["weight"].sum() == pytest.approx(100, abs=0.1)
+    assert set(comp.loc[comp["selected"], "code"]) == {"01", "04"}     # 04.5 belongs to division 04
 
 
 def test_changing_end_month_changes_every_chart(data, filt):
     a = (cd.comparison(data.cpi, filt)["value"].tolist(),
-         cd.composition(data.cpi, data.weights, filt)["contribution_pts"].dropna().tolist())
+         cd.basket(data.cpi, data.weights, filt)["contribution_pts"].dropna().tolist())
     filt.end = pd.Timestamp("2025-12-01")
     b = (cd.comparison(data.cpi, filt)["value"].tolist(),
-         cd.composition(data.cpi, data.weights, filt)["contribution_pts"].dropna().tolist())
+         cd.basket(data.cpi, data.weights, filt)["contribution_pts"].dropna().tolist())
     assert a[0] != b[0] and a[1] != b[1]
 
 

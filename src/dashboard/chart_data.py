@@ -56,25 +56,17 @@ def comparison(cpi: pd.DataFrame, f: A.Filters, by_nationality: bool = False) ->
         columns=["code", "name", "value", "display", "group"])
 
 
-def composition(cpi: pd.DataFrame, weights: pd.DataFrame | None, f: A.Filters) -> pd.DataFrame:
-    """Chart 3 - composition: weight of each selected division in the basket,
-    plus its contribution to headline year-on-year change at the end month."""
-    if weights is None:
-        return pd.DataFrame(columns=["code", "name", "weight", "contribution_pts", "selected"])
-    contrib = A.contributions(cpi, weights, f.end)
-    selected_divs = {c.split(".")[0] for c in f.codes if c != config.HEADLINE_CODE}
-    if not selected_divs:                      # headline only -> show all divisions
-        selected_divs = set(contrib["code"])
-    contrib["selected"] = contrib["code"].isin(selected_divs)
-    contrib["label"] = contrib["code"] + " " + contrib["name"]
-    rest = contrib.loc[~contrib["selected"], "weight"].sum()
-    shares = contrib[contrib["selected"]][["code", "label", "weight", "contribution_pts"]].copy()
-    if rest > 0:
-        shares = pd.concat([shares, pd.DataFrame([{"code": "rest", "label": "Rest of basket",
-                                                   "weight": rest, "contribution_pts": np.nan}])],
-                           ignore_index=True)
-    shares.attrs.update(contrib.attrs)
-    return shares
+def basket(cpi: pd.DataFrame, weights: pd.DataFrame, f: A.Filters) -> pd.DataFrame:
+    """Chart 3 - composition: weight of every division in the basket and its
+    contribution to headline year-on-year change at the end month. Divisions
+    in the selection are marked, so the chart highlights them."""
+    comp = A.contributions(cpi, weights, f.end)
+    selected = {c.split(".")[0] for c in f.codes if c != config.HEADLINE_CODE} or set(comp["code"])
+    comp["selected"] = comp["code"].isin(selected)
+    comp["label"] = comp["code"] + " " + comp["name"]
+    comp["w_text"] = comp["weight"].map(lambda v: f"{v:.1f}%")
+    comp["c_text"] = comp["contribution_pts"].map(lambda v: "" if pd.isna(v) else f"{v:+.2f}")
+    return comp
 
 
 def heatmap(cpi: pd.DataFrame, f: A.Filters) -> pd.DataFrame:

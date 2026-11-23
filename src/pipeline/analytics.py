@@ -124,7 +124,7 @@ def change(cpi: pd.DataFrame, code: str, period, measure: str = "yoy",
                   population=population, period=f"{p:%Y-%m}",
                   compared_with=None if prev_p is None else f"{prev_p:%Y-%m}",
                   current_index=cur, previous_index=prev,
-                  unit="index points" if measure == "index" else "%",
+                  unit=config.INDEX_UNIT if measure == "index" else "%",
                   sources=_source_of(cpi, code, population, periods))
 
 

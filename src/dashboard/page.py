@@ -263,15 +263,10 @@ def chart_composition(data: PreparedData, f: A.Filters) -> None:
                    "version this means the file could not be fetched from iGA's website.")
         return
     try:
-        comp = A.contributions(data.cpi, data.weights, f.end)
+        comp = cd.basket(data.cpi, data.weights, f)
     except A.DataUnavailable as exc:
         st.info(str(exc))
         return
-    selected = {c.split(".")[0] for c in f.codes if c != config.HEADLINE_CODE} or set(comp["code"])
-    comp["selected"] = comp["code"].isin(selected)
-    comp["label"] = comp["code"] + " " + comp["name"]
-    comp["w_text"] = comp["weight"].map(lambda v: f"{v:.1f}%")
-    comp["c_text"] = comp["contribution_pts"].map(lambda v: "" if pd.isna(v) else f"{v:+.2f}")
     if f.population != config.NATIONAL:
         st.caption("Weights and contributions use the national basket: iGA publishes no expenditure "
                    "weights by nationality.")
@@ -280,7 +275,7 @@ def chart_composition(data: PreparedData, f: A.Filters) -> None:
     with left:
         st.markdown("**Share of household spending** · iGA Table 2.01")
         y = alt.Y("label:N", sort="-x", title=None, axis=alt.Axis(labelLimit=260, ticks=False, domain=False))
-        base = alt.Chart(comp).encode(y=y, x=alt.X("weight:Q", title="Weight (% of basket)"))
+        base = alt.Chart(comp).encode(y=y, x=alt.X("weight:Q", title=f"Weight ({config.WEIGHT_UNIT})"))
         bars = base.mark_bar(size=16, cornerRadiusEnd=4).encode(
             color=alt.condition("datum.selected", alt.value(SERIES[0]), alt.value(AXIS)),
             tooltip=[alt.Tooltip("label:N", title="Division"), alt.Tooltip("weight:Q", format=".2f", title="Weight %")])

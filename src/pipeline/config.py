@@ -145,14 +145,12 @@ NATIONALITY_MAP = {
 COLUMN_OVERRIDES: dict[str, dict[str, str]] = {"D1": {}, "D2": {}}
 
 # Dataset 3 is not committed (iGA Terms of Use). `python -m scripts.download_sources`
-# fetches it from iGA and checks it is the same version the group used.
-# Paste the direct link of the XLSX (right-click the download link on the iGA
-# page -> Copy link address).
+# (and the app, on a fresh server) fetches it from iGA's website and checks that
+# it is the same version the group used (SHA-256 fingerprint).
 D3_DOWNLOAD_URL: str | None = ("https://www.iga.gov.bh/en/Media/Others/Statistical%20Publications/"
                                  "Economic%20Statistics/CPI/CPI-Tables-%20Jan2020-Oct%202023.xlsx")
 D3_PAGE_URL = "https://www.iga.gov.bh/en/category/statistical-publications"
 D3_SHA256 = "5b3f8ef1bdf5ebcf5bae98c216880411df5f7422ccef356641c0ed0820e7d14f"  # file used by the group
-D3_BYTES = 228243
 
 # Dataset 3 sheets. None = find automatically by searching cell text.
 D3_WEIGHTS_SHEET: str | None = "2.01"  # Table 2.01: 'Expenditure Weights' column
