@@ -71,7 +71,7 @@ def make_d1(path: Path) -> None:
     rows = []
     for k, code in enumerate(D1_CODES):
         values = _series(code, months, seed=k)
-        for p, v in zip(months, values):
+        for p, v in zip(months, values, strict=True):
             if code == "10" and p >= pd.Timestamp("2025-09-01"):
                 v = 111.4                       # flat after Sep 2025 (like question 12)
             text = PLANTED.get((code, f"{p:%Y-%m}"), _fmt(v, p))
@@ -98,7 +98,7 @@ def make_d2(path: Path) -> None:
     for k, code in enumerate(D2_CODES):
         for j, nat in enumerate(["Bahraini", "Non-Bahraini"]):
             values = _series(code, pd.date_range("2019-04-01", "2026-09-01", freq="MS"), seed=100 + 2 * k + j)[1:]
-            for p, v in zip(months, values):
+            for p, v in zip(months, values, strict=True):
                 text = PLANTED_D2.get((code, f"{p:%Y-%m}", nat), f"{v:.1f}")
                 rows.append({"Year": p.year, "Month": p.strftime("%m %B"), "COICOP Code": code,
                              "Level": 1.0 if code == "0" else 2.0,

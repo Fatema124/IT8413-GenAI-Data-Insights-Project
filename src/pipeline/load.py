@@ -144,7 +144,7 @@ def _standardise(df: pd.DataFrame, cols: dict[str, str], source: str) -> pd.Data
         "raw_value": df[cols["value"]],
     })
     if "year" in cols and "month" in cols:
-        out["period"] = [to_period(y, m) for y, m in zip(df[cols["year"]], df[cols["month"]])]
+        out["period"] = [to_period(y, m) for y, m in zip(df[cols["year"]], df[cols["month"]], strict=True)]
     else:
         out["period"] = [parse_period_text(v) for v in df[cols["period"]]]
     if "nationality" in cols:

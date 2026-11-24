@@ -43,13 +43,13 @@
 ## ✨ What it does
 
 PriceLens BH turns Bahrain's official consumer price index into answers analysts can quote with confidence.
-The data pipeline and analytics dashboard (F1 - F3) are complete and live.
+The data pipeline and analytics dashboard (F1 - F3) are complete and live, and the tools the model will call are ready.
 
 <table>
   <tr>
     <td width="33%" valign="top">
-      <h3>🔎 15 years of prices</h3>
-      Filter by period (2010 - Aug 2026), household (national, Bahraini, non-Bahraini), category and measure.
+      <h3>🔎 16 years of prices</h3>
+      Filter by period (2010 - Aug 2026; 2010 derived), household (national, Bahraini, non-Bahraini), category and measure.
     </td>
     <td width="33%" valign="top">
       <h3>📈 Four analytical views</h3>
@@ -81,7 +81,7 @@ The data pipeline and analytics dashboard (F1 - F3) are complete and live.
 | Part | Features | Status |
 |---|---|---|
 | Data pipeline and analytics dashboard | F1 · F2 · F3 | ✅ Done |
-| Question answering over data | F4 · F6 · F8 | ⏳ Coming next |
+| Question answering over data | F4 · F6 · F8 | 🔧 Model tools ready ([`tools.py`](src/pipeline/tools.py)); model next |
 | Document retrieval, citations and refusal | F5 · F7 | ⏳ Coming next |
 | Query log, configuration display and report export | F9 · F10 | ⏳ Coming next |
 | Evaluation runs, vendor benchmark and enhancements | - | ⏳ Coming next |
@@ -94,6 +94,8 @@ The data pipeline and analytics dashboard (F1 - F3) are complete and live.
 | Dataset 1 vs iGA's own Table 2.01 | **5,574 / 5,574** values match |
 | Our month-on-month and year-on-year % vs iGA's published % | **4,744 / 4,746** and **4,777 / 4,779** (the exceptions are typos in iGA's tables) |
 | Dataset 2 vs iGA's Table 3 | **179** inconsistent values found in 2022, kept as published and flagged in the dashboard |
+| 2010 headline, derived from iGA's 12-month changes | December 2010 computed two ways agrees to **0.000** points |
+| Dataset 3 version | SHA-256 fingerprint matches the group's copy on every build |
 | Automated tests | **76** passing |
 
 The held-out test questions are never run before the final evaluation.
@@ -211,11 +213,11 @@ python -m pytest -q                   # automated tests
 
 ```
 data/raw/          source files (Dataset 3 added locally)
-src/pipeline/      data loading, preparation and calculations
+src/pipeline/      data loading, preparation, calculations and the model's tools
 src/dashboard/     Streamlit dashboard: filters and charts
-scripts/           result checks and Dataset 3 download
+scripts/           result checks, Dataset 3 download, sources record
 tests/             automated tests
-docs/              data preparation, quality report, images
+docs/              data preparation, quality report, sources, images
 run_app.bat/.sh    one-click start
 ```
 

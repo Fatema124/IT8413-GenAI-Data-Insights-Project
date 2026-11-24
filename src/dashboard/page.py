@@ -160,7 +160,7 @@ def sidebar_filters(data: PreparedData) -> tuple[A.Filters, bool]:
         available["level"].isin([0, 1] if level == "Divisions" else [2, 3])]
     options = pool["code"].tolist()
     default = [c for c in ["0", "01", "04", "07"] if c in options] or options[:3]
-    names = dict(zip(lab["code"], lab["name"]))
+    names = dict(zip(lab["code"], lab["name"], strict=True))
     codes = st.sidebar.multiselect(
         "Categories", options, default=default, key=f"f_codes_{population}_{level}",
         max_selections=MAX_CATEGORIES, format_func=lambda c: f"{c}  {names.get(c, '')}",
@@ -222,7 +222,7 @@ def chart_trend(data: PreparedData, f: A.Filters) -> None:
     if df.empty:
         st.info("No data for this selection.")
         return
-    names = dict(zip(data.labels["code"], data.labels["name"]))
+    names = dict(zip(data.labels["code"], data.labels["name"], strict=True))
     codes, _ = cd.usable_codes(data.cpi, f)
     n_months = df["period"].nunique()
     if n_months > 48:     # long range: one label per year, no dots
@@ -394,7 +394,8 @@ def sources_section(data: PreparedData) -> None:
          "Terms link": v.get("licence_url", "")}
         for (k, v), use in zip(config.SOURCES.items(), [
             "National index, all 69 categories", "Bahraini vs non-Bahraini index",
-            "Expenditure weights (Table 2.01), headline 2011-2016 (Table 1), 2010 derived"])]), hide_index=True,
+            "Expenditure weights (Table 2.01), headline 2011-2016 (Table 1), 2010 derived"], strict=True)]),
+        hide_index=True,
         column_config={"Link": st.column_config.LinkColumn(), "Terms link": st.column_config.LinkColumn()})
     if data.discrepancies is not None and len(data.discrepancies):
         st.subheader("Known source discrepancy")

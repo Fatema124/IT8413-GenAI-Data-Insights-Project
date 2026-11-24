@@ -48,7 +48,7 @@ def _tidy_codes(raw: pd.DataFrame, source: str, log: QualityLog) -> pd.DataFrame
     df = raw.copy()
     df["published_label"] = df["raw_name"].map(lambda v: labels.clean_name(v, fix_spelling=False))
     df["raw_name"] = df["raw_name"].map(labels.clean_name)
-    df["code"] = [labels.resolve_code(c, n) for c, n in zip(df["raw_code"], df["published_label"])]
+    df["code"] = [labels.resolve_code(c, n) for c, n in zip(df["raw_code"], df["published_label"], strict=True)]
     if df["code"].isna().any():
         bad = df.loc[df["code"].isna(), "raw_name"].unique()[:5]
         raise ValueError(f"{source}: {df['code'].isna().sum()} rows have no usable code, e.g. {list(bad)}")
@@ -194,7 +194,7 @@ def prepare_d2(raw: pd.DataFrame, log: QualityLog) -> pd.DataFrame:
 def prepare_weights(raw: pd.DataFrame, log: QualityLog) -> pd.DataFrame:
     df = raw.copy()
     df["raw_name"] = df["raw_name"].map(labels.clean_name)
-    df["code"] = [labels.resolve_code(c, n) for c, n in zip(df["raw_code"], df["raw_name"])]
+    df["code"] = [labels.resolve_code(c, n) for c, n in zip(df["raw_code"], df["raw_name"], strict=True)]
     df = df[df["code"].notna()]
     df["weight"] = _to_number(df["raw_value"])
     df = df[df["weight"].notna()].copy()
@@ -209,7 +209,7 @@ def prepare_weights(raw: pd.DataFrame, log: QualityLog) -> pd.DataFrame:
     status = "ok" if abs(total - 100) <= 0.1 else "warning"
     log.add("D3", "Division weights add up to 100%", round(total, 2),
             f"{len(divisions)} divisions", status)
-    df["name"] = [config.DIVISION_NAMES.get(c, n) for c, n in zip(df["code"], df["raw_name"])]
+    df["name"] = [config.DIVISION_NAMES.get(c, n) for c, n in zip(df["code"], df["raw_name"], strict=True)]
     return df[["code", "name", "level", "division", "weight", "source_sheet", "source_row"]].reset_index(drop=True)
 
 
@@ -284,7 +284,7 @@ def crosscheck_table_201(raw_idx: pd.DataFrame, d1: pd.DataFrame, log: QualityLo
     """Every Dataset 1 value vs iGA's own Table 2.01 for the months both cover."""
     t = raw_idx.copy()
     t["code"] = [labels.resolve_code(c, labels.clean_name(n, False)) if pd.notna(c) or pd.notna(n) else None
-                 for c, n in zip(t["raw_code"], t["raw_name"])]
+                 for c, n in zip(t["raw_code"], t["raw_name"], strict=True)]
     t.loc[t["raw_name"].astype(str).str.strip().str.lower().eq("all divisions"), "code"] = config.HEADLINE_CODE
     t["d3"] = _to_number(t["raw_value"])
     t = t.dropna(subset=["code", "d3", "period"])
@@ -313,7 +313,7 @@ def crosscheck_table_3(raw_nat: pd.DataFrame, d2: pd.DataFrame, log: QualityLog)
     t["published"] = t["raw_name"].map(lambda v: labels.clean_name(v, fix_spelling=False))
     t["code"] = [config.HEADLINE_CODE if pd.isna(c) and str(n).strip().lower() == "all divisions"
                  else (labels.normalise_code(c) if pd.notna(c) else None)
-                 for c, n in zip(t["raw_code"], t["published"])]
+                 for c, n in zip(t["raw_code"], t["published"], strict=True)]
     t["iga_table3"] = _to_number(t["raw_value"])
     t = t.dropna(subset=["code", "iga_table3", "period"])
     m = t.merge(d2[["period", "code", "population", "index"]].dropna(), on=["period", "code", "population"])
