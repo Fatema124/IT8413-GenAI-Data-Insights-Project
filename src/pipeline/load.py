@@ -231,25 +231,40 @@ def load_d3_weights(book: dict[str, pd.DataFrame]) -> pd.DataFrame:
     return out
 
 
+def _pct_columns(raw: pd.DataFrame) -> tuple[int | None, int | None]:
+    """Columns of Table 1's '1 month' and '12 months' % changes (None if absent)."""
+    for i in range(min(len(raw), 15)):
+        cells = [str(v).strip().lower() if pd.notna(v) else "" for v in raw.iloc[i].values]
+        one = [j for j, c in enumerate(cells) if re.fullmatch(r"1\s*months?", c)]
+        twelve = [j for j, c in enumerate(cells) if re.fullmatch(r"12\s*months?", c)]
+        if one or twelve:
+            return (one[0] if one else None), (twelve[0] if twelve else None)
+    return None, None
+
+
 def load_d3_history(book: dict[str, pd.DataFrame]) -> pd.DataFrame:
     """Table 1: headline CPI with months laid out as columns -> one row per month."""
     sheet = _find_sheet(book, config.D3_HISTORY_SHEET, ("2011",))
     raw = book[sheet]
     records = []
     # Layout C (iGA Table 1): a row holding only the year, then one row per
-    # month with the month name in column B and the April 2019 = 100 value in
-    # column C. 'Yearly' rows (annual averages) are skipped.
+    # month with the month name in column B, the April 2019 = 100 value in
+    # column C and iGA's 1-month and 12-month % changes in columns G and H
+    # (found from the header row). 'Yearly' rows (annual averages) are skipped.
+    pct_1m, pct_12m = _pct_columns(raw)
     year = None
     for i, row in raw.iterrows():
-        v = list(row.values) + [None, None, None]
+        v = list(row.values) + [None] * 8
         first = str(v[0]).strip().split(".")[0] if pd.notna(v[0]) else ""
         if re.fullmatch(r"(19|20)\d{2}", first):
             year = first if pd.isna(v[1]) else None    # '2011 Yearly' is an annual row
             continue
         if year and pd.notna(v[1]) and parse_month(v[1]) and pd.notna(v[2]):
-            records.append((to_period(year, v[1]), v[2], i + 1))
+            records.append((to_period(year, v[1]), v[2], i + 1,
+                            v[pct_1m] if pct_1m is not None else None,
+                            v[pct_12m] if pct_12m is not None else None))
     if records:
-        out = pd.DataFrame(records, columns=["period", "raw_value", "source_row"])
+        out = pd.DataFrame(records, columns=["period", "raw_value", "source_row", "raw_pct_1m", "raw_pct_12m"])
         out["source"], out["source_sheet"] = "D3", sheet
         return out
     for i, row in raw.iterrows():

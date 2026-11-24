@@ -5,6 +5,9 @@ __pycache__/
 
 # Secrets - never commit API keys
 .env
+.env.*
+*.key
+*.pem
 .streamlit/secrets.toml
 
 # iGA website files may not be redistributed (iGA Terms of Use)

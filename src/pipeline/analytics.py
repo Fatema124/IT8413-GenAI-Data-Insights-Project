@@ -3,9 +3,16 @@
 One set of functions serves three consumers, so a figure is computed the
 same way wherever it appears:
   * the dashboard (F2, F3),
-  * the model's tools for questions over the data (F4/F6, Eman's part) -
-    each function returns a plain dict that can be sent back to the model,
+  * the model's tools for questions over the data (F4/F6) - through
+    src/pipeline/tools.py, which turns loose input ("transport", "Aug 2026")
+    into exact arguments and every result into plain JSON for the model,
   * the report export (F9).
+
+Return types: single figures come back as `Figure` (use `.to_dict()`),
+averages as dicts, and tables (comparisons, contributions, priorities) as
+DataFrames. Functions here expect exact arguments (canonical codes such as
+"04.5", household names from config.POPULATIONS, a month); tools.py is the
+layer that accepts anything a user might type.
 
 The brief warns that month-on-month, year-on-year and since-base readings
 "can differ for the same category and date"; every change function
@@ -85,8 +92,7 @@ def name_of(cpi: pd.DataFrame, code: str) -> str:
 
 def _source_of(cpi: pd.DataFrame, code: str, population: str, periods) -> str:
     rows = cpi[(cpi["code"] == code) & (cpi["population"] == population) & cpi["period"].isin(periods)]
-    names = {"D1": "Dataset 1", "D2": "Dataset 2", "D3": "Dataset 3"}
-    return ", ".join(sorted({names.get(s, s) for s in rows["source"]}))
+    return ", ".join(sorted({config.SOURCE_NAMES.get(s, s) for s in rows["source"]}))
 
 
 def index_value(cpi: pd.DataFrame, code: str, period, population: str = config.NATIONAL) -> float:

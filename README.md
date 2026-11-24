@@ -13,7 +13,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-app-FF4B4B?logo=streamlit&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-54%20passing-2ea44f)
+![Tests](https://img.shields.io/badge/tests-76%20passing-2ea44f)
 ![Development checks](https://img.shields.io/badge/development%20checks-31%2F31-2ea44f)
 ![Data](https://img.shields.io/badge/data-iGA%20Bahrain-2a78d6)
 
@@ -49,7 +49,7 @@ The data pipeline and analytics dashboard (F1 - F3) are complete and live.
   <tr>
     <td width="33%" valign="top">
       <h3>🔎 15 years of prices</h3>
-      Filter by period (2011 - Aug 2026), household (national, Bahraini, non-Bahraini), category and measure.
+      Filter by period (2010 - Aug 2026), household (national, Bahraini, non-Bahraini), category and measure.
     </td>
     <td width="33%" valign="top">
       <h3>📈 Four analytical views</h3>
@@ -90,11 +90,11 @@ The data pipeline and analytics dashboard (F1 - F3) are complete and live.
 
 | Check | Result |
 |---|---|
-| Development questions that use the data | **31 / 31** checks pass (12 questions, including 3 the tool must decline) |
+| Development questions that use the data | **31 / 31** checks pass (12 questions; for 3 of them the checks confirm the data cannot answer, so the tool must decline) |
 | Dataset 1 vs iGA's own Table 2.01 | **5,574 / 5,574** values match |
 | Our month-on-month and year-on-year % vs iGA's published % | **4,744 / 4,746** and **4,777 / 4,779** (the exceptions are typos in iGA's tables) |
 | Dataset 2 vs iGA's Table 3 | **179** inconsistent values found in 2022, kept as published and flagged in the dashboard |
-| Automated tests | **54** passing |
+| Automated tests | **76** passing |
 
 The held-out test questions are never run before the final evaluation.
 
@@ -155,7 +155,9 @@ streamlit run src/dashboard/page.py
 </picture>
 
 One set of calculations feeds the dashboard, the model's tools and the report, so a figure is always computed
-the same way. When the sources don't hold a value, the functions say so and the tool declines instead of guessing.
+the same way. The model calls them through [`src/pipeline/tools.py`](src/pipeline/tools.py), which accepts what
+users type ("transport", "Aug 2026") and tells apart "not in the sources" (decline) from "unclear request" (ask
+again). When the sources don't hold a value, the tool declines instead of guessing.
 Full details: [`docs/data_pipeline.md`](docs/data_pipeline.md).
 
 ## 💬 Question answering
@@ -178,17 +180,21 @@ Full details: [`docs/data_pipeline.md`](docs/data_pipeline.md).
 |---|---|---|---|
 | 1 | [CPI - Division and Group - Index Number](https://www.data.gov.bh/explore/dataset/01-consumer-price-index-division-and-group-index-number/) | National index, 69 categories | Bahrain Open Government Data License v1.0 |
 | 2 | [CPI, Division - Index Numbers by Nationality](https://www.data.gov.bh/explore/dataset/02-cpi-division-index-number-by-nationality/) | Bahraini vs non-Bahraini index | Bahrain Open Government Data License v1.0 |
-| 3 | [CPI Tables, Jan 2020 - Oct 2023](https://www.iga.gov.bh/en/Media/Others/Statistical%20Publications/Economic%20Statistics/CPI/CPI-Tables-%20Jan2020-Oct%202023.xlsx) (XLSX download) | Expenditure weights, headline from 2011, cross-checks | iGA website Terms of Use (not redistributed) |
+| 3 | [CPI Tables, Jan 2020 - Oct 2023](https://www.iga.gov.bh/en/Media/Others/Statistical%20Publications/Economic%20Statistics/CPI/CPI-Tables-%20Jan2020-Oct%202023.xlsx) (XLSX download) | Expenditure weights, headline 2011 - 2016 (2010 derived), cross-checks | iGA website Terms of Use (not redistributed) |
 
 The working copy covers **January 2017 - August 2026**, as in the approved proposal. Which values the pipeline
 changes, and why, is listed in [`docs/data_pipeline.md`](docs/data_pipeline.md); every check is in
-[`docs/quality_report.md`](docs/quality_report.md).
+[`docs/quality_report.md`](docs/quality_report.md); download dates, versions and terms are in
+[`docs/sources.md`](docs/sources.md).
 
 > [!NOTE]
-> Contains data from the Information & eGovernment Authority (iGA), Kingdom of Bahrain, used under the Bahrain
-> Open Government Data License v1.0. Provided "as is" without warranty; the Government of Bahrain accepts no
-> liability for its use. Percentage changes, averages, rankings and contributions are computed by Group G2 and
-> are not official iGA figures.
+> Contains data from the Information & eGovernment Authority (iGA), Kingdom of Bahrain, via www.data.gov.bh,
+> governed by the Bahrain Open Government Data License v1.0 (20 May 2025), available at
+> https://www.nea.gov.bh/Documents/OpenDataLicense.pdf. Data extracted on 13/10/2026 (Datasets 1-2).
+> Provided "as is" without warranty; to the fullest
+> extent permitted by law, the Government of Bahrain is not liable for any loss caused by the use of the data
+> or of analyses derived from it. Percentage changes, averages, rankings and contributions are computed by
+> Group G2 from the published index numbers; they are not official iGA figures.
 
 <details>
 <summary><b>🧪 Checking the results</b></summary>

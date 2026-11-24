@@ -5,6 +5,11 @@
 Every DEVELOPMENT question that uses the datasets is checked: 8, 10, 12, 13,
 21, 23, 26, 28, 30 (answers) and 16, 19, 20 (must be declined). The other
 development questions (2, 4, 6, 25) are answered from the documents only.
+
+What the checks for 16, 19 and 20 prove: that the DATA cannot answer them,
+and (Q16) that the model's tool layer reports "not_available" instead of a
+number. They do not prove the model's final answer declines; that is F7
+evidence from the evaluation runs, where the model's answers are scored.
 The 15 held-out questions are deliberately left out: the proposal and the
 brief (7.1) say they must not be run or used to guide changes before the
 final evaluation.
@@ -21,6 +26,7 @@ from typing import Callable
 from src.pipeline import analytics as A
 from src.pipeline import config
 from src.pipeline.run import PreparedData, build, load_prepared
+from src.pipeline.tools import Toolbox
 
 IDX, PCT = 0.05, config.GROUND_TRUTH_TOLERANCE
 
@@ -63,6 +69,13 @@ def _declined(fn):
     return f
 
 
+def _earliest(d):
+    """Earliest published headline month (Table 1) and earliest derivable one (2010)."""
+    h = d.cpi[(d.cpi["code"] == "0") & (d.cpi["population"] == config.NATIONAL) & d.cpi["index"].notna()]
+    published = h[h["source"] != "D3-derived"]["period"].min()
+    return f"{published:%Y-%m} / {h['period'].min():%Y-%m}"
+
+
 def _flat_since(code, start, end, value):
     def f(d):
         s = A.series(d.cpi, code).loc[start:end]
@@ -94,15 +107,16 @@ CHECKS = [
     Check(13, "National figure lies between the two",
           lambda d: "yes" if A.index_value(d.cpi, "11", "2026-08", "Non-Bahraini") < A.index_value(d.cpi, "11", "2026-08")
           < A.index_value(d.cpi, "11", "2026-08", "Bahraini") else "no", "yes"),
-    Check(16, "Declined: no governorate figures (Muharraq)",
-          _declined(lambda d: A.index_value(d.cpi, "0", "2026-08", "Muharraq Governorate")), "yes"),
-    Check(19, "Declined: data are index numbers, no shop prices",
+    Check(16, "Tool reports not_available (Muharraq)",
+          lambda d: Toolbox(d).call("get_index", {"category": "headline", "month": "2026-08",
+                                                  "household": "Muharraq Governorate"})["status"], "not_available"),
+    Check(19, "Data coverage: index numbers, no shop prices",
           lambda d: "yes" if not any("price" in c.lower() for c in d.cpi.columns)
           and set(d.cpi["population"]) <= set(config.POPULATIONS) else "no", "yes"),
-    Check(20, "Declined: no headline CPI for Dec 2009",
+    Check(20, "Data coverage: no headline CPI for Dec 2009",
           _declined(lambda d: A.index_value(d.cpi, "0", "2009-12")), "yes"),
-    Check(20, "Earliest headline month in the sources",
-          lambda d: f"{A.series(d.cpi, '0').dropna().index.min():%Y-%m}", "2011-01"),
+    Check(20, "Earliest month: published / derived",
+          lambda d: _earliest(d), "2011-01 / 2010-01"),
     Check(21, "Headline annual average 2019", lambda d: A.annual_average(d.cpi, "0", 2019)["annual_average"], 99.9, IDX),
     Check(21, "Headline annual average 2021", lambda d: A.annual_average(d.cpi, "0", 2021)["annual_average"], 97.0, IDX),
     Check(21, "Change 2019 -> 2021 annual average %",

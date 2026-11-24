@@ -227,9 +227,118 @@ def test_download_check_accepts_expected_layout(tmp_path):
 
 
 def test_headline_history_reaches_2011(data):
-    s = A.series(data.cpi, "0")
-    assert s.index.min() == pd.Timestamp("2011-01-01")
+    h = data.cpi[(data.cpi["code"] == "0") & (data.cpi["population"] == config.NATIONAL)]
+    assert h[h["source"] == "D3"]["period"].min() == pd.Timestamp("2011-01-01")   # published
     assert "Dataset 3" in A.change(data.cpi, "0", "2017-01", "yoy").sources
+
+
+# ---------------------------------------------------------------- 2010 derived (proposal Section 1, Q20)
+def test_2010_derived_from_12_month_changes(data):
+    h = data.cpi[(data.cpi["code"] == "0") & (data.cpi["population"] == config.NATIONAL)].set_index("period")
+    derived = h[h["source"] == "D3-derived"]
+    assert list(derived.index) == list(pd.date_range("2010-01-01", "2010-12-01", freq="MS"))
+    # the fixture's hidden 2010 values were 84.1 ... 85.2; the derivation recovers them
+    assert abs(derived.loc["2010-03-01", "index"] - 84.3) < 1e-6
+    assert "derived" in A.change(data.cpi, "0", "2010-03", "index").sources
+    with pytest.raises(A.DataUnavailable):                      # nothing before 2010 (Q20)
+        A.index_value(data.cpi, "0", "2009-12")
+    q = data.quality.set_index("check")
+    assert q.loc["2010 headline derived from Table 1's 12-month changes", "status"] == "ok"
+
+
+def test_dataset3_fingerprint_recorded(data):
+    q = data.quality.set_index("check")
+    assert q.loc[config.D3_FINGERPRINT_CHECK, "status"] == "warning"   # the fixture is not iGA's file
+
+
+# ---------------------------------------------------------------- data caution (audit bug 1 and 2)
+def _f(start, end, codes, pop, measure):
+    return A.Filters(pd.Timestamp(start), pd.Timestamp(end), codes, pop, measure)
+
+
+def test_caution_covers_yoy_computed_from_flagged_month(data):
+    # Jan-Jun 2023 year-on-year compares with Jan-Jun 2022; Jan 2022 is the planted discrepancy
+    flags = cd.flagged_values(data.discrepancies, _f("2023-01-01", "2023-06-01", ["07"], "Non-Bahraini", "yoy"))
+    assert (pd.Timestamp("2022-01-01") in set(flags["period"])) and set(flags["code"]) == {"07"}
+    assert "year-on-year" in cd.caution_text(flags)
+
+
+def test_caution_covers_mom_comparison_month(data):
+    flags = cd.flagged_values(data.discrepancies, _f("2022-02-01", "2022-04-01", ["07"], "Non-Bahraini", "mom"))
+    assert pd.Timestamp("2022-01-01") in set(flags["period"])
+
+
+def test_no_caution_when_no_flagged_value_is_used(data):
+    assert cd.flagged_values(data.discrepancies, _f("2023-01-01", "2023-06-01", ["07"], "Non-Bahraini", "index")).empty
+    assert cd.flagged_values(data.discrepancies, _f("2022-01-01", "2022-06-01", ["07"], "National", "yoy")).empty
+
+
+def test_caution_for_household_comparison_chart(data):
+    f = _f("2021-06-01", "2022-01-01", ["07"], "National", "index")
+    assert cd.flagged_values(data.discrepancies, f).empty
+    assert not cd.flagged_values(data.discrepancies, f, by_nationality=True).empty
+
+
+def test_priority_table_caution_uses_end_and_year_before(data):
+    assert not cd.priority_flagged(data.discrepancies, _f("2022-06-01", "2023-01-01", ["0"], "National", "yoy")).empty
+    assert cd.priority_flagged(data.discrepancies, _f("2023-06-01", "2023-08-01", ["0"], "National", "yoy")).empty
+
+
+# ---------------------------------------------------------------- model tools (audit integration risks 4, 5)
+@pytest.fixture(scope="session")
+def tools(data):
+    from src.pipeline.tools import Toolbox
+    return Toolbox(data)
+
+
+@pytest.mark.parametrize("args,code", [
+    ({"category": "4.5"}, "04.5"), ({"category": "04.5"}, "04.5"), ({"category": "transport"}, "07"),
+    ({"category": "Headline"}, "0"), ({"category": "07"}, "07"),
+])
+def test_tools_resolve_categories(tools, args, code):
+    r = tools.call("get_index", {**args, "month": "2026-08"})
+    assert r["status"] == "ok" and r["code"] == code
+
+
+@pytest.mark.parametrize("month", ["2026-08", "2026/8", "08/2026", "Aug 2026", "August 2026", "2026 August", "latest"])
+def test_tools_read_months(tools, month):
+    assert tools.call("get_index", {"category": "0", "month": month})["period"] == "2026-08"
+
+
+def test_tools_households_and_refusal_types(tools):
+    assert tools.call("get_index", {"category": "11", "month": "2026-08", "household": "non bahraini"})["value"] == 101.6
+    assert tools.call("get_index", {"category": "0", "month": "2026-08",
+                                    "household": "Muharraq Governorate"})["status"] == "not_available"
+    assert tools.call("get_index", {"category": "0", "month": "2009-12"})["status"] == "not_available"
+    assert tools.call("get_index", {"category": "0", "month": "last month"})["status"] == "bad_input"
+    assert tools.call("get_index", {"category": "0", "date": "2026-08"})["status"] == "bad_input"
+    assert tools.call("no_such_tool", {})["status"] == "bad_input"
+
+
+def test_tools_return_plain_json_with_caution(tools):
+    import json
+    from src.pipeline.tools import TOOL_DECLARATIONS
+    for decl in TOOL_DECLARATIONS:
+        assert decl["name"] in tools._tools
+    r = tools.call("get_change", {"category": "07", "month": "2023-01", "measure": "yoy", "household": "Non-Bahraini"})
+    assert r["status"] == "ok" and "caution" in r
+    for name, args in [("rank_categories", {"month": "2026-08", "measure": "yoy"}),
+                       ("get_priorities", {"month": "2026-08"}), ("get_contributions", {"month": "2026-08"}),
+                       ("compare_households", {"category": "11", "month": "2026-08"}),
+                       ("get_series", {"category": "0", "start_month": "2025-01", "end_month": "2025-12"}),
+                       ("list_categories", {"level": 1}), ("data_coverage", {})]:
+        out = tools.call(name, args)
+        assert out["status"] == "ok", (name, out)
+        json.dumps(out, allow_nan=False)
+
+
+def test_series_colours_never_cycle():
+    import ast
+    src = (config.REPO_ROOT / "src" / "dashboard" / "page.py").read_text()
+    tree = ast.parse(src)
+    values = {t.id: n.value for n in tree.body if isinstance(n, ast.Assign) for t in n.targets
+              if isinstance(t, ast.Name) and t.id in ("SERIES", "MAX_CATEGORIES")}
+    assert len(ast.literal_eval(values["SERIES"])) >= ast.literal_eval(values["MAX_CATEGORIES"])
 
 
 # ---------------------------------------------------------------- empty selections (bug found in fresh test)

@@ -38,11 +38,11 @@ MEASURE_LABELS = {"yoy": "Year-on-year %", "mom": "Month-on-month %",
 FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif"
 INK, INK_2, MUTED = "#0b0b0b", "#52514e", "#898781"
 GRID, AXIS, SURFACE = "#e1e0d9", "#c3c2b7", "#fcfcfb"
-SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6"]
+SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
 HEADLINE_COLOUR = INK_2                  # the headline is the reference line: neutral ink
 POPULATION_COLOURS = {"National": "#2a78d6", "Bahraini": "#eb6834", "Non-Bahraini": "#1baf7a"}
 UP, DOWN, NEUTRAL = "#e34948", "#2a78d6", "#f0efec"   # diverging pair, grey midpoint
-MAX_CATEGORIES = 8                       # headline + 7 colours, never cycled
+MAX_CATEGORIES = 8                       # 8 palette colours (+ neutral headline): never cycled
 
 CSS = """
 <style>
@@ -92,6 +92,18 @@ def _series_scale(codes: list[str], names: dict[str, str]) -> alt.Scale:
     return alt.Scale(domain=domain, range=colours)
 
 
+def _padded_domain(values, left: float = 0.3, right: float = 0.18) -> list[float]:
+    """x-axis range that always includes 0 and leaves room for the value labels.
+
+    Labels sit right of positive bars and left of negative bars; without the
+    extra room a negative label runs into the category names.
+    """
+    v = pd.Series(values, dtype=float).dropna()
+    lo, hi = min(0.0, v.min() if len(v) else 0.0), max(0.0, v.max() if len(v) else 0.0)
+    span = (hi - lo) or 1.0
+    return [float(lo - (left * span if lo < 0 else 0.0)), float(hi + right * span)]
+
+
 @st.cache_data(show_spinner="Preparing the CPI data (the first start on a new server takes about a minute)...")
 def _load() -> PreparedData:
     """Use the prepared data; on a fresh server (e.g. Streamlit Cloud) build it first.
@@ -99,15 +111,23 @@ def _load() -> PreparedData:
     data/processed/ is not in the repository, so a new server prepares it here:
     Dataset 3 is fetched from iGA (it may not be republished in the repository),
     then the same pipeline as `python -m src.pipeline.run` runs once.
+
+    Only a COMPLETE build (with Dataset 3) is saved to data/processed/. If the
+    download fails once, the next start tries again instead of reusing a copy
+    without the weights; the Composition tab also offers a "try again" button.
     """
     try:
-        return load_prepared()
+        data = load_prepared()
+        if data.weights is not None:
+            return data
     except FileNotFoundError:
-        from scripts.download_sources import ensure_dataset3
-        ensure_dataset3(verbose=False)
-        data = build()
+        pass
+    from scripts.download_sources import ensure_dataset3
+    ensure_dataset3(verbose=False)
+    data = build()
+    if data.weights is not None:
         write_outputs(data)
-        return data
+    return data
 
 
 # --------------------------------------------------------------------------
@@ -118,7 +138,7 @@ def sidebar_filters(data: PreparedData) -> tuple[A.Filters, bool]:
     st.sidebar.markdown("## Filters")
     st.sidebar.caption("Every chart and table follows these filters.")
 
-    months = sorted(cpi["period"].unique())          # Jan 2011 (Dataset 3) - Aug 2026
+    months = sorted(cpi["period"].unique())          # Jan 2010 (derived) / 2011 (Dataset 3) - Aug 2026
     start, end = st.sidebar.select_slider(
         "Time period", options=months, value=(months[-36], months[-1]),
         format_func=lambda p: pd.Timestamp(p).strftime("%b %Y"), key="f_period")
@@ -237,9 +257,11 @@ def chart_comparison(data: PreparedData, f: A.Filters, by_nat: bool) -> None:
     colour = alt.Color("group:N", title=None,
                        scale=alt.Scale(domain=groups, range=[POPULATION_COLOURS.get(g, SERIES[0]) for g in groups]),
                        legend=alt.Legend() if by_nat else None)
-    y = alt.Y("label:N", sort=alt.EncodingSortField("value", op="max", order="descending"), title=None,
-              axis=alt.Axis(labelLimit=280, ticks=False, domain=False))
+    # An explicit order: a sort by field is dropped when bars and labels are layered.
+    order = df.groupby("label")["value"].max().sort_values(ascending=False).index.tolist()
+    y = alt.Y("label:N", sort=order, title=None, axis=alt.Axis(labelLimit=280, ticks=False, domain=False))
     base = alt.Chart(df).encode(y=y, x=alt.X("value:Q", title=MEASURE_LABELS[f.measure],
+                                             scale=alt.Scale(domain=_padded_domain(df["value"]), nice=False),
                                              axis=alt.Axis(gridColor=GRID)))
     if by_nat:   # National first, then Bahraini, then Non-Bahraini, in every group
         base = base.encode(yOffset=alt.YOffset("group:N", sort=list(config.POPULATIONS)))
@@ -261,15 +283,20 @@ def chart_composition(data: PreparedData, f: A.Filters) -> None:
                    "not in the repository: save iGA's CPI tables XLSX as data/raw/CPI-Tables-_Jan2020-Oct_2023.xlsx "
                    "(or run `python -m scripts.download_sources`), then `python -m src.pipeline.run`. On the online "
                    "version this means the file could not be fetched from iGA's website.")
+        if st.button("Try again to fetch Dataset 3 from iGA"):
+            _load.clear()
+            st.rerun()
         return
     try:
         comp = cd.basket(data.cpi, data.weights, f)
     except A.DataUnavailable as exc:
         st.info(str(exc))
         return
-    if f.population != config.NATIONAL:
-        st.caption("Weights and contributions use the national basket: iGA publishes no expenditure "
-                   "weights by nationality.")
+    st.caption("Weights are iGA's fixed national basket (Table 2.01), so they don't change with the period "
+               "or households. Your selected divisions are highlighted. Contributions are for the end month "
+               f"of the selected period ({pd.Timestamp(f.end):%B %Y})."
+               + (f" {f.population} households are selected: iGA publishes no weights by nationality, so the "
+                  "national basket is used." if f.population != config.NATIONAL else ""))
     left, right = st.columns(2)
 
     with left:
@@ -285,9 +312,11 @@ def chart_composition(data: PreparedData, f: A.Filters) -> None:
     with right:
         st.markdown(f"**Contribution to headline year-on-year change** · {pd.Timestamp(f.end):%b %Y}")
         c = comp.dropna(subset=["contribution_pts"])
-        y = alt.Y("label:N", sort=alt.EncodingSortField("contribution_pts", order="descending"), title=None,
-                  axis=alt.Axis(labelLimit=260, ticks=False, domain=False))
-        base = alt.Chart(c).encode(y=y, x=alt.X("contribution_pts:Q", title="Percentage points"))
+        order = c.sort_values("contribution_pts", ascending=False)["label"].tolist()
+        y = alt.Y("label:N", sort=order, title=None, axis=alt.Axis(labelLimit=260, ticks=False, domain=False))
+        base = alt.Chart(c).encode(y=y, x=alt.X("contribution_pts:Q", title="Percentage points",
+                                                scale=alt.Scale(domain=_padded_domain(c["contribution_pts"]),
+                                                                nice=False)))
         bars = base.mark_bar(size=16, cornerRadiusEnd=4).encode(
             color=alt.condition("datum.contribution_pts >= 0", alt.value(UP), alt.value(DOWN)),
             opacity=alt.condition("datum.selected", alt.value(1.0), alt.value(0.35)),
@@ -343,6 +372,14 @@ def priority_section(data: PreparedData, f: A.Filters) -> None:
     config_cols["Criteria met"] = st.column_config.ProgressColumn(
         "Criteria met", min_value=0, max_value=4, format="%d of 4")
     _show(st.dataframe, show, hide_index=True, column_config=config_cols)
+    flags = cd.priority_flagged(data.discrepancies, f)
+    if len(flags):
+        divs = ", ".join(sorted(flags["code"].unique()))
+        what = ("the nationality-gap criterion and the change columns use"
+                if flags["used_in"].str.contains("MoM").any() else "the nationality-gap criterion uses")
+        st.warning(f"Data caution: {what} Dataset 2 values for {cd.month_span(flags['period'])} that differ from "
+                   f"iGA's own Table 3 (divisions {divs}). Treat those results with care. "
+                   "Details: Data & sources tab.")
     st.caption("Criteria from proposal Section 1: fastest rising, furthest from base, large share of spending, "
                "different for Bahraini and non-Bahraini households. Ranks are across all 12 divisions; the table "
                "shows the divisions in your selection (all 12 when only the headline is selected). "
@@ -353,19 +390,25 @@ def sources_section(data: PreparedData) -> None:
     st.subheader("Data sources")
     _show(st.dataframe, pd.DataFrame([
         {"Dataset": k, "Title": v["title"], "Publisher": v["publisher"], "Used for": use,
-         "Coverage": v["coverage"], "Retrieved": v["retrieved"], "Terms": v["licence"]}
+         "Coverage": v["coverage"], "Retrieved": v["retrieved"], "Terms": v["licence"], "Link": v["url"],
+         "Terms link": v.get("licence_url", "")}
         for (k, v), use in zip(config.SOURCES.items(), [
             "National index, all 69 categories", "Bahraini vs non-Bahraini index",
-            "Expenditure weights (Table 2.01), headline 2011-2016 (Table 1)"])]), hide_index=True)
+            "Expenditure weights (Table 2.01), headline 2011-2016 (Table 1), 2010 derived"])]), hide_index=True,
+        column_config={"Link": st.column_config.LinkColumn(), "Terms link": st.column_config.LinkColumn()})
     if data.discrepancies is not None and len(data.discrepancies):
         st.subheader("Known source discrepancy")
         d = data.discrepancies
+        by_pop = d.groupby("population").agg(n_values=("code", "size"), n_series=("code", "nunique"))
+        parts = [f"{r.n_values} values in {r.n_series} {pop} series" for pop, r in by_pop.iterrows()]
+        years = sorted(d["period"].dt.year.unique())
         st.markdown(
-            f"For **{len(d)} values**, mainly the 12 non-Bahraini divisions in **2022**, iGA's portal file "
+            f"For **{len(d)} values** ({'; '.join(parts)}; {', '.join(map(str, years))}), iGA's portal file "
             "(Dataset 2) differs from iGA's own published Table 3 (September 2023 release). Table 3 is internally "
-            "consistent (its divisions add up to the published headline) while Dataset 2's 2022 divisions do not, "
-            "so the portal values for these months are likely wrong. The tool keeps Dataset 2 as its working "
-            "source, as stated in the proposal, and flags these values wherever they appear.")
+            "consistent (its divisions add up to the published headline) while Dataset 2's values for these months "
+            "are not, so the portal values are likely wrong. The tool keeps Dataset 2 as its working source, as "
+            "stated in the proposal, and flags every figure that uses these values: the charts, the summary "
+            "figures, year-on-year changes a year later, the priority table and the model's tool results.")
         show = d.copy()
         show["period"] = show["period"].dt.strftime("%b %Y")
         _show(st.dataframe, show.rename(columns={
@@ -378,22 +421,46 @@ def sources_section(data: PreparedData) -> None:
     _show(st.dataframe, data.quality, hide_index=True)
 
 
+def coverage_notes(data: PreparedData, f: A.Filters) -> None:
+    """Explain empty or derived months in the selection, using the data itself (no fixed dates)."""
+    cpi = data.cpi
+    have = cpi[(cpi["population"] == f.population) & cpi["index"].notna()]
+    if f.population != config.NATIONAL:
+        first = have["period"].min()
+        if f.start < first:
+            st.info(f"{f.population} figures (Dataset 2) start in {first:%B %Y}, so earlier months are empty.")
+        return
+    divisions_from = have.loc[have["level"] > 0, "period"].min()
+    if f.start < divisions_from:
+        st.info(f"Before {divisions_from:%B %Y} only the headline CPI is available (Dataset 3, iGA Table 1). "
+                f"Divisions and groups start in {divisions_from:%B %Y} (Dataset 1).")
+    derived = have[(have["source"] == "D3-derived") & (have["period"] >= f.start) & (have["period"] <= f.end)]
+    if len(derived):
+        st.caption(f"{derived['period'].min():%b %Y} - {derived['period'].max():%b %Y}: derived from iGA Table 1's "
+                   "12-month changes (proposal Section 1); not published index levels.")
+
+
+def dataset3_notice(data: PreparedData) -> None:
+    """Warn when the Dataset 3 file on this server is not the version the group used."""
+    q = data.quality
+    row = q[q["check"] == config.D3_FINGERPRINT_CHECK]
+    if len(row) and row.iloc[0]["status"] == "warning":
+        st.warning("Dataset 3 on this server is not the same file the group used (SHA-256 fingerprint differs). "
+                   "Weights, the 2010-2016 headline and the cross-checks may differ from our report. "
+                   "Details: Data & sources tab.")
+
+
 def render_dashboard(data: PreparedData | None = None) -> A.Filters:
     data = data or _load()
     st.markdown(CSS, unsafe_allow_html=True)
     f, by_nat = sidebar_filters(data)
 
-    if f.population != config.NATIONAL and f.start < pd.Timestamp("2019-05-01"):
-        st.info(f"{f.population} figures (Dataset 2) start in May 2019, so earlier months are empty.")
-    elif f.population == config.NATIONAL and f.start < pd.Timestamp("2017-01-01"):
-        st.info("Before January 2017 only the headline CPI is available (Dataset 3, iGA Table 1). "
-                "Divisions and groups start in January 2017 (Dataset 1).")
-    flagged = cd.flagged_in_selection(data.discrepancies, f)
+    dataset3_notice(data)
+    coverage_notes(data, f)
+    flagged = cd.flagged_values(data.discrepancies, f, by_nat)
     if len(flagged):
-        months = f"{flagged['period'].min():%b %Y} - {flagged['period'].max():%b %Y}"
-        st.warning(f"Data caution: for {flagged['code'].nunique()} of the selected categories ({months}), iGA's portal file "
-                   f"(Dataset 2) differs from iGA's own published Table 3 by up to {flagged['difference'].abs().max():.1f} "
-                   "points. The dashboard shows Dataset 2, as stated in our proposal. Details: Data & sources tab.")
+        st.warning(f"Data caution: {cd.caution_text(flagged)} The dashboard shows Dataset 2, as stated in our "
+                   "proposal. Details: Data & sources tab.")
     _, dropped = cd.usable_codes(data.cpi, f)
     if dropped:
         st.info(f"{', '.join(dropped)}: no {f.population} series (nationality figures cover the headline "

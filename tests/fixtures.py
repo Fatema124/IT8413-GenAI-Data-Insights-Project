@@ -145,19 +145,34 @@ def make_d3(path: Path, d1_path: Path, d2_path: Path | None = None) -> None:
     month_names = ["January", "February", "March", "April", "May", "June", "July", "August",
                    "September", "October", "November", "December"]
     # Sheet '1': title rows, yearly rows, then a year row followed by 12 month rows
-    t1 = [[None] * 4, ["Table 1", None, None, None], ["Consumer Price Index (All Items)", None, None, None],
-          [None] * 4, ["Period", None, "Consumer Price Index (CPI)", None], [None, None, "April 2019=100", "2006=100"],
-          [None] * 4, [2011, "Yearly", 84.0, 111.6]]
+    # Columns as in iGA's file: C = April 2019 = 100, D = 2006 = 100, G / H = 1-month / 12-month % change.
+    t1 = [[None] * 8, ["Table 1"] + [None] * 7, ["Consumer Price Index (All Items)"] + [None] * 7,
+          [None] * 8, ["Period", None, "Consumer Price Index (CPI)", None, None, None, "Percentage Change", None],
+          [None, None, "April 2019=100", "2006=100", None, None, "1 month", "12 months"],
+          [None] * 8, [2011, "Yearly", 84.0, 111.6, None, None, None, -0.4]]
     rng = np.random.default_rng(7)
+    values = {}
     for year in list(range(2011, 2017)) + [2020, 2021]:
-        t1.append([year, None, None, None])
+        for m in range(1, 13):
+            p = pd.Timestamp(year=year, month=m, day=1)
+            values[p] = head.get(p, round(85 + rng.normal(0, 1), 1))
+    # 2010 (never published in Table 1): only used to compute 2011's % changes,
+    # so the pipeline's derivation can be checked against known values.
+    for m in range(1, 13):
+        values[pd.Timestamp(year=2010, month=m, day=1)] = round(84 + 0.1 * m, 3)
+    for year in list(range(2011, 2017)) + [2020, 2021]:
+        t1.append([year] + [None] * 7)
         for m, name in enumerate(month_names, start=1):
             p = pd.Timestamp(year=year, month=m, day=1)
-            value = head.get(p, round(85 + rng.normal(0, 1), 1))
+            value = values[p]
             if year == 2020 and m <= 3:
                 value -= 3.0                    # iGA's Table 1 2020 rows disagree with Dataset 1
-            t1.append([None, name, value, value * 1.33])
-    t1 += [[None] * 4, ["Source: IGA", None, None, None]]
+            pct_1m = pct_12m = None
+            if year == 2011:
+                pct_1m = (value / values[p - pd.DateOffset(months=1)] - 1) * 100
+                pct_12m = (value / values[p - pd.DateOffset(years=1)] - 1) * 100
+            t1.append([None, name, value, value * 1.33, None, None, pct_1m, pct_12m])
+    t1 += [[None] * 8, ["Source: IGA"] + [None] * 7]
     # Sheet '2.01': weights column plus one column per month Jan 2017 - Oct 2023
     months = pd.date_range("2017-01-01", "2023-10-01", freq="MS")
     t2 = [["Table 2.01"], ["Consumers price index"], ["Divisions and groups – index numbers"],

@@ -231,15 +231,53 @@ def prepare_history(raw: pd.DataFrame, d1: pd.DataFrame, log: QualityLog) -> pd.
                  "Table 2.01 agrees with Dataset 1 there, so those Table 1 rows are not used") if len(bad) else "",
                 "ok" if not len(bad) else ("info" if not set(years) & kept else "warning"))
     lo, hi = (pd.Timestamp(p) for p in config.D3_HISTORY_KEEP)
+    full = df
     df = df[(df["period"] >= lo) & (df["period"] <= hi)].copy()
     log.add("D3", "Headline history rows kept (2011-2016)", len(df),
             "only the years before Dataset 1 starts are used", "info")
+    if config.D3_DERIVE_2010:
+        derived = derive_2010(full, log)
+        if len(derived):
+            df = pd.concat([derived, df], ignore_index=True)
     df["code"] = config.HEADLINE_CODE
     df["level"] = 0
     df["division"] = None
     df["population"] = config.NATIONAL
     df["raw_name"] = config.HEADLINE_NAME
     return df
+
+
+def derive_2010(history: pd.DataFrame, log: QualityLog) -> pd.DataFrame:
+    """2010 headline from Table 1's 12-month changes (proposal Section 1, Q20).
+
+    index(2010-m) = index(2011-m) / (1 + change_12m(2011-m) / 100). The result
+    is a derived value, not a published index level, so it is stored with
+    source "D3-derived". December 2010 can also be derived from January 2011's
+    1-month change; the two routes are compared as a check.
+    """
+    if "raw_pct_12m" not in history:
+        return history.iloc[0:0]
+    h = history.copy()
+    h["pct_12m"] = _to_number(h["raw_pct_12m"])
+    h["pct_1m"] = _to_number(h.get("raw_pct_1m", pd.Series(index=h.index, dtype=float)))
+    y2011 = h[(h["period"].dt.year == 2011) & h["index"].notna() & h["pct_12m"].notna()]
+    if y2011.empty:
+        return history.iloc[0:0]
+    out = y2011.copy()
+    out["index"] = out["index"] / (1 + out["pct_12m"] / 100)
+    out["period"] = out["period"] - pd.DateOffset(years=1)
+    out["source"] = "D3-derived"
+    detail = f"{out['period'].min():%b %Y} - {out['period'].max():%b %Y}; nothing earlier can be derived"
+    status = "info"
+    jan = h[(h["period"] == pd.Timestamp("2011-01-01")) & h["pct_1m"].notna()]
+    dec = out[out["period"] == pd.Timestamp("2010-12-01")]
+    if len(jan) and len(dec):
+        via_1m = float(jan["index"].iloc[0]) / (1 + float(jan["pct_1m"].iloc[0]) / 100)
+        gap = abs(via_1m - float(dec["index"].iloc[0]))
+        detail += f"; Dec 2010 via the 1-month change differs by {gap:.3f} points"
+        status = "ok" if gap <= 0.05 else "warning"
+    log.add("D3", "2010 headline derived from Table 1's 12-month changes", len(out), detail, status)
+    return out.drop(columns=["pct_12m", "pct_1m"])
 
 
 def crosscheck_table_201(raw_idx: pd.DataFrame, d1: pd.DataFrame, log: QualityLog) -> None:

@@ -28,43 +28,73 @@ RAW_FILES = {
 # --------------------------------------------------------------------------
 # Source metadata (shown in the app, the report export and the README)
 # --------------------------------------------------------------------------
+# Download dates as recorded in the proposal (Section 2); licence cl. 3.3(a) and brief 6.2.
+# The committed CSV files also hold September 2026 (8,073 + 2,314 rows); DATA_END removes it,
+# which leaves exactly the proposal's working copy (8,004 + 2,288 rows, to August 2026).
+D12_RETRIEVED = "2026-10-13"
+D3_RETRIEVED = "2026-10-27"
+
+LICENCE_NAME = "Bahrain Open Government Data License v1.0 (20 May 2025)"
+LICENCE_URL = "https://www.nea.gov.bh/Documents/OpenDataLicense.pdf"
+D3_TERMS_URL = "https://www.iga.gov.bh/en/article/terms-of-use"
+
 SOURCES = {
     "D1": {
         "title": "Consumer Price Index (CPI) - Division and Group - Index Number",
         "publisher": "Information & eGovernment Authority (iGA)",
         "url": "https://www.data.gov.bh/explore/dataset/01-consumer-price-index-division-and-group-index-number/",
-        "coverage": "Monthly, Jan 2017 - Aug 2026",
-        "retrieved": "2026-10-13",   # update to the group's actual download date if different
-        "licence": "Bahrain Open Government Data License v1.0",
+        "coverage": "Monthly, Jan 2017 - Aug 2026 (working copy)",
+        "retrieved": D12_RETRIEVED,
+        "licence": LICENCE_NAME,
+        "licence_url": LICENCE_URL,
         "expected_rows": 8004,
     },
     "D2": {
         "title": "Consumers Price Index (CPI), Division - Index Numbers by Nationality",
         "publisher": "Information & eGovernment Authority (iGA)",
         "url": "https://www.data.gov.bh/explore/dataset/02-cpi-division-index-number-by-nationality/",
-        "coverage": "Monthly, May 2019 - Aug 2026",
-        "retrieved": "2026-10-13",
-        "licence": "Bahrain Open Government Data License v1.0",
+        "coverage": "Monthly, May 2019 - Aug 2026 (working copy)",
+        "retrieved": D12_RETRIEVED,
+        "licence": LICENCE_NAME,
+        "licence_url": LICENCE_URL,
         "expected_rows": 2288,
     },
     "D3": {
         "title": "Consumer Price Index - Tables, January 2020 - October 2023 (XLSX, published 30/10/2023)",
         "publisher": "Information & eGovernment Authority (iGA)",
         "url": "https://www.iga.gov.bh/en/category/statistical-publications",
-        "coverage": "Weights (Table 2.01); headline history from Jan 2011",
-        "retrieved": "2026-10-27",
+        "coverage": "Weights (Table 2.01); headline from Jan 2011 (Table 1), 2010 derived",
+        "retrieved": D3_RETRIEVED,
         "licence": "iGA website Terms of Use (not redistributed)",
+        "licence_url": D3_TERMS_URL,
         "expected_rows": None,
     },
 }
 
-# Licence clause 3.3(c) requires a set attribution statement; 3.3(b) requires
-# that our own analysis is labelled as ours. Both are displayed in the app.
+# How each `source` value in the prepared table is named in answers and on screen.
+SOURCE_NAMES = {
+    "D1": "Dataset 1",
+    "D2": "Dataset 2",
+    "D3": "Dataset 3 (iGA Table 1)",
+    "D3-derived": "Dataset 3 (derived from iGA Table 1's 12-month change)",
+}
+
+
+def _ddmmyyyy(iso: str) -> str:
+    y, m, d = iso.split("-")
+    return f"{d}/{m}/{y}"
+
+
+# Licence clause 3.3(c) requires a set statement naming the provider, the licence
+# URL and the government's disclaimer; 3.3(a) the extraction date; 3.3(b) that our
+# own analysis is labelled as ours. All three are shown in the app, the README and
+# the exported report.
 ATTRIBUTION = (
-    "Contains data from the Information & eGovernment Authority (iGA), "
-    "Kingdom of Bahrain, used under the Bahrain Open Government Data License "
-    "v1.0. Data extracted on 13/10/2026 (Datasets 1-2). Provided 'as is' "
-    "without warranty; the Government of Bahrain accepts no liability for its use."
+    "Contains data from the Information & eGovernment Authority (iGA), Kingdom of Bahrain, "
+    f"via www.data.gov.bh, governed by the {LICENCE_NAME}, available at {LICENCE_URL}. "
+    f"Data extracted on {_ddmmyyyy(D12_RETRIEVED)} (Datasets 1-2). Provided 'as is' without warranty; "
+    "to the fullest extent permitted by law, the Government of Bahrain is not liable for any loss "
+    "caused by the use of the data or of analyses derived from it."
 )
 OWN_ANALYSIS_NOTE = (
     "Percentage changes, averages, rankings and contributions are computed "
@@ -157,6 +187,11 @@ D3_WEIGHTS_SHEET: str | None = "2.01"  # Table 2.01: 'Expenditure Weights' colum
 D3_NATIONALITY_SHEET: str | None = "3"  # Table 3: index by nationality (cross-check of Dataset 2)
 D3_HISTORY_SHEET: str | None = "1"     # Table 1: headline CPI, monthly from Jan 2011
 D3_HISTORY_KEEP = ("2011-01", "2016-12")  # only these rows are used (proposal)
+# Proposal Section 1 and Q20: Table 1's 12-month changes make every 2010 month
+# derivable (index_2010 = index_2011 / (1 + change_12m / 100)). Derived rows are
+# stored with source "D3-derived" and labelled as derived wherever they appear.
+D3_DERIVE_2010 = True
+D3_FINGERPRINT_CHECK = "Dataset 3 is the same file the group used (SHA-256)"
 
 # --------------------------------------------------------------------------
 # Monitoring priorities (supports the decision in proposal Section 1)

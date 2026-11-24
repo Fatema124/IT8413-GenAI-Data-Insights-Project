@@ -13,6 +13,7 @@ Outputs (all regenerated on every run; data/processed/ is git-ignored):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime
@@ -42,6 +43,11 @@ def build(raw_dir: Path | None = None, use_d3: bool = True) -> PreparedData:
     weights = history = discrepancies = None
     d3_path = raw_dir / config.RAW_FILES["D3"]
     if use_d3 and d3_path.exists():
+        digest = hashlib.sha256(d3_path.read_bytes()).hexdigest()
+        same = digest == config.D3_SHA256
+        log.add("D3", config.D3_FINGERPRINT_CHECK, "yes" if same else "no",
+                f"SHA-256 {digest[:16]}..." + ("" if same else f" (the group's copy: {config.D3_SHA256[:16]}...)"),
+                "ok" if same else "warning")
         raw_w, raw_h, raw_idx, raw_nat = load.load_d3(d3_path)
         weights = prepare.prepare_weights(raw_w, log)
         history = prepare.prepare_history(raw_h, d1, log)
