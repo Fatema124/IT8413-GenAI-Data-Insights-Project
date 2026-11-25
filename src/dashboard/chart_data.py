@@ -216,3 +216,31 @@ def caution_text(flags: pd.DataFrame) -> str:
 def flagged_in_selection(discrepancies: pd.DataFrame | None, f: A.Filters) -> pd.DataFrame:
     """Kept for compatibility: the caution for the current view (see flagged_values)."""
     return flagged_values(discrepancies, f)
+
+
+# --------------------------------------------------------------------------
+# Automatic category choice (filter: "fastest rising", "fastest falling", ...)
+# --------------------------------------------------------------------------
+AUTO_MODES = ("Fastest rising", "Fastest falling", "Largest share of spending")
+
+
+def auto_pick(cpi: pd.DataFrame, weights: pd.DataFrame | None, f: A.Filters, pool: list[str],
+              mode: str, n: int) -> list[str]:
+    """Pick the n categories from `pool` that best match `mode` at the end month.
+
+    Rising / falling use the selected measure (the index level becomes the
+    year-on-year change, because a level is not a change); spending share uses
+    iGA's weights. The headline is never picked: it is the reference.
+    """
+    pool = [c for c in pool if c != config.HEADLINE_CODE]
+    if not pool:
+        return []
+    if mode == "Largest share of spending":
+        if weights is None:
+            return []
+        w = weights[weights["code"].isin(pool)].sort_values("weight", ascending=False)
+        return w["code"].head(n).tolist()
+    measure = "yoy" if f.measure == "index" else f.measure
+    t = A.compare_categories(cpi, f.end, measure, codes=pool, population=f.population).dropna(subset=["value"])
+    t = t.sort_values("value", ascending=(mode == "Fastest falling"))
+    return t["code"].head(n).tolist()

@@ -2,10 +2,22 @@
 [theme]
 base = "light"
 primaryColor = "#2a78d6"            # calm blue for buttons, sliders and selected filters
-backgroundColor = "#f9f9f7"
-secondaryBackgroundColor = "#f0efec"
+backgroundColor = "#f4f6f9"         # light grey page, so the white cards and charts stand out
+secondaryBackgroundColor = "#e9edf2"
 textColor = "#0b0b0b"
+borderColor = "#dfe3ea"
 font = "sans serif"
+
+# Dark filter panel (Streamlit >= 1.46 themes the sidebar separately)
+[theme.sidebar]
+backgroundColor = "#1d2432"
+secondaryBackgroundColor = "#2a3344"
+textColor = "#e9edf3"
+primaryColor = "#6ea8f5"
+borderColor = "#3a4558"
+
+[client]
+toolbarMode = "viewer"            # visitors see a clean page, without developer options
 
 [browser]
 gatherUsageStats = false

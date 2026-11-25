@@ -124,27 +124,43 @@ The full log is in `docs/quality_report.md`.
 
 ## 4. Filters (F2)
 
-| Filter | Options |
-|---|---|
-| Time period | Any range of months, Jan 2010 - Aug 2026 (before 2017: headline only, from Dataset 3; 2010 derived) |
-| Households | National, Bahraini, Non-Bahraini |
-| Category level and categories | Headline, divisions, groups and items |
-| Measure | Year-on-year, month-on-month, since April 2019, index level |
+The filters sit in four numbered steps in the sidebar, so a user who does not know the data can start
+from ready-made choices (tutor feedback at the build checkpoint, 25/11/2026).
+
+| Step | Filter | Options |
+|---|---|---|
+| 1 | Time period | Presets: last 12 months, last 3 years, last 5 years, since April 2019, all years; or **Custom** (any months, Jan 2010 - Aug 2026). Before 2017 only the headline exists; 2010 is derived |
+| 2 | Households | All households (national), Bahraini, non-Bahraini; option to compare all three side by side |
+| 3 | Detail | Main groups (12 divisions), detailed items, or both (national only) |
+| 3 | Within | Narrow the detailed items to one main group (e.g. only the items inside Food) |
+| 3 | How to choose | By hand (up to 8), or automatically: fastest rising, fastest falling, largest share of spending (3 - 8 categories), with the overall index as a reference |
+| 4 | Show change as | Price level (index), change from the previous month, from a year earlier, or since April 2019 |
+| - | Key numbers for | Which selected category the four key-number cards describe |
+| - | Reset | Returns every filter to its default |
 
 All filters are held in one `Filters` object and applied by one function, `analytics.apply_filters`;
-every chart and summary figure receives the same object, so every display responds to the active filters.
-When a nationality is selected, groups and items (national only) are left out and the user is told.
+every chart, summary figure, plain-language finding and table receives the same object, so every display
+responds to the active filters. When a nationality is selected, groups and items (national only) are left
+out and the user is told.
 
 ## 5. Dashboard (F3)
 
 | # | Visualisation | Type the brief asks for | Responds to |
 |---|---|---|---|
-| KPIs + summary table | Index, MoM, YoY, since base and change over the range for every selected category | Summary figures | all filters |
+| Key numbers + summary table | Four cards (price level, monthly change, yearly change, change over the period), each with a plain-language sentence and a tag naming the measure; a table for every selected category with a CSV download | Summary figures | all filters |
+| Findings | "In plain words": 3 - 4 sentences generated from the data (overall change, biggest rise and fall in the selection, biggest contributor) | Summary figures | all filters |
 | 1 | Line chart of the measure over time | Change over time | period, categories, households, measure |
 | 2 | Bar chart of the measure at the end month (optionally National vs Bahraini vs non-Bahraini) | Comparison between categories | all filters |
 | 3 | Basket weights (horizontal bar chart) and contribution of each division to headline YoY | Composition | categories (highlighted), end month (contributions); see 5.1 |
 | 4 | Heatmap of the measure by category and month | Distribution | all filters |
 | + | Monitoring priorities table: each division against the four criteria in the proposal | Supports the decision | categories, households, end month (ranks across all 12 divisions) |
+
+The header shows overall prices for the selected households across every available month, with the
+selected period highlighted, so the user sees where the period sits in the longer history. Each key-number
+card carries a small chart of the same measure (last 3 years, last 12 months, last 2 years, the selected
+period); gaps stay gaps. Every chart states the question it answers and how to read it in one line; why each chart type was chosen
+is recorded in [`docs/chart_choices.md`](chart_choices.md). A glossary ("What do these numbers mean?")
+explains index, base period, the three changes, weights and contributions in plain words.
 
 **Contribution** (chart 3) = weight × (index now − index a year ago) ÷ headline a year ago, in percentage
 points. It is an approximation; the sum is shown next to the published headline change so the gap is visible.

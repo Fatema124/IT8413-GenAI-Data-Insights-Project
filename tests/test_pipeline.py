@@ -334,7 +334,7 @@ def test_tools_return_plain_json_with_caution(tools):
 
 def test_series_colours_never_cycle():
     import ast
-    src = (config.REPO_ROOT / "src" / "dashboard" / "page.py").read_text()
+    src = (config.REPO_ROOT / "src" / "dashboard" / "page.py").read_text(encoding="utf-8")
     tree = ast.parse(src)
     values = {t.id: n.value for n in tree.body if isinstance(n, ast.Assign) for t in n.targets
               if isinstance(t, ast.Name) and t.id in ("SERIES", "MAX_CATEGORIES")}
@@ -420,3 +420,61 @@ def test_failed_download_leaves_no_file_and_does_not_crash(tmp_path, monkeypatch
     ok, msg = download_sources.ensure_dataset3(verbose=False)
     assert not ok and "failed" in msg
     assert not (tmp_path / "server_raw" / config.RAW_FILES["D3"]).exists()
+
+
+# ---------------------------------------------------------------- plain-language layer (tutor feedback)
+def test_sentences_say_what_each_number_means():
+    from src.dashboard import explain as E
+    mom = A.Figure("mom", 0.2, "0", "All items", "National", "2026-08", "2026-07", 104.2, 104.0, "%", "Dataset 1")
+    assert E.sentence(mom, "mom") == "Prices rose 0.2% between July 2026 and August 2026."
+    idx = A.Figure("index", 89.0, "04", "Housing", "National", "2026-08", None, 89.0, None, "points", "Dataset 1")
+    assert E.sentence(idx, "index") == "Prices in August 2026 were 11.0% lower than in April 2019 (= 100)."
+    assert E.direction(-1.1) == ("down", "▼") and E.direction(104.2, "index")[0] == "up"
+    assert E.sentence(None, "yoy").startswith("Not available")
+    assert E.display_name("Actual Rentals For Housing*") == "Actual Rentals for Housing"
+    assert set(E.CHARTS) == {"trend", "comparison", "weights", "contributions", "heatmap"}
+
+
+def test_findings_follow_the_filters(data):
+    from src.dashboard import explain as E
+    f = A.Filters(pd.Timestamp("2026-01-01"), pd.Timestamp("2026-08-01"), ["0", "01", "07"], "Non-Bahraini", "mom")
+    text = " ".join(E.key_findings(data.cpi, data.weights, f))
+    assert "non-Bahraini households" in text and "than the month before" in text and "August 2026" in text
+
+
+def test_auto_pick_categories(data):
+    f = A.Filters(pd.Timestamp("2026-01-01"), pd.Timestamp("2026-08-01"), ["0"], "National", "yoy")
+    divisions = sorted(data.labels.loc[data.labels["level"] == 1, "code"])
+    rising = cd.auto_pick(data.cpi, data.weights, f, ["0"] + divisions, "Fastest rising", 3)
+    values = [A.change(data.cpi, c, "2026-08", "yoy").value for c in rising]
+    assert len(rising) == 3 and "0" not in rising and values == sorted(values, reverse=True)
+    falling = cd.auto_pick(data.cpi, data.weights, f, divisions, "Fastest falling", 3)
+    assert not set(falling) & set(rising)
+    share = cd.auto_pick(data.cpi, data.weights, f, divisions, "Largest share of spending", 2)
+    w = data.weights.set_index("code")["weight"]
+    assert w[share[0]] >= w[share[1]] >= w[[c for c in divisions if c not in share]].max()
+
+
+def test_priority_reasons_in_plain_words(data):
+    from src.dashboard import explain as E
+    t = A.priority_table(data.cpi, data.weights, "2026-08")
+    reasons = [E.priority_reasons(r, t.attrs["rules"]) for _, r in t.iterrows()]
+    assert all(r and r[0].isupper() for r in reasons)
+    assert any("fastest rising" in r for r in reasons)
+
+
+# ---------------------------------------------------------------- inline graphics (header chart, card sparklines)
+def test_sparklines_keep_gaps_and_colours():
+    from src.dashboard import visuals as V
+    svg = V.spark_line([100, 101, None, 103, 104], "#2a78d6", ref=100)
+    assert svg.startswith("<svg") and svg.count("<polyline") == 2          # gap -> two segments, never joined
+    bars = V.spark_bars([0.5, -0.2, 0.1])
+    assert bars.count("#e34948") == 2 and bars.count("#2a78d6") == 1       # red = rose, blue = fell
+    assert V.spark_line([None, 1.0], "#000") == ""                          # too little data: nothing drawn
+
+
+def test_header_chart_follows_households_and_period(data):
+    from src.dashboard import visuals as V
+    h = data.cpi[(data.cpi["code"] == "0") & (data.cpi["population"] == "Bahraini")].set_index("period")
+    svg = V.hero_chart(h["index"], h["source"].eq("D3-derived"), pd.Timestamp("2024-01-01"), pd.Timestamp("2026-08-01"))
+    assert "your period" in svg and f"{h['index'].dropna().iloc[-1]:.1f}" in svg

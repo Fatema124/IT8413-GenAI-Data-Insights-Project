@@ -13,7 +13,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-app-FF4B4B?logo=streamlit&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-76%20passing-2ea44f)
+![Tests](https://img.shields.io/badge/tests-82%20passing-2ea44f)
 ![Development checks](https://img.shields.io/badge/development%20checks-31%2F31-2ea44f)
 ![Data](https://img.shields.io/badge/data-iGA%20Bahrain-2a78d6)
 
@@ -32,7 +32,7 @@
 
 <div align="center">
   <a href="https://pricelens-bh.streamlit.app">
-    <img src="docs/images/dashboard-framed.png" alt="PriceLens BH dashboard: filters, summary figures and a data caution" width="92%">
+    <img src="docs/images/dashboard-framed.png" alt="PriceLens BH dashboard: dark filter panel, header chart of overall prices, key-number cards with small trend charts and a plain-language summary" width="92%">
   </a>
   <br>
   <sub>The dashboard on Streamlit Community Cloud. Click the picture to open it.</sub>
@@ -48,16 +48,18 @@ The data pipeline and analytics dashboard (F1 - F3) are complete and live, and t
 <table>
   <tr>
     <td width="33%" valign="top">
-      <h3>🔎 16 years of prices</h3>
-      Filter by period (2010 - Aug 2026; 2010 derived), household (national, Bahraini, non-Bahraini), category and measure.
+      <h3>🔎 Filters in 4 steps</h3>
+      Quick periods or any range (2010 - Aug 2026), households, categories by hand or automatically (fastest rising,
+      fastest falling, largest share of spending) and the measure.
     </td>
     <td width="33%" valign="top">
       <h3>📈 Four analytical views</h3>
       Change over time, comparison between categories, basket composition with contributions, and a heatmap.
     </td>
     <td width="33%" valign="top">
-      <h3>🧮 Summary figures</h3>
-      Index level, month-on-month, year-on-year and change since April 2019 for every selected category.
+      <h3>🧮 Numbers in plain words</h3>
+      Every key number has a one-line explanation and a small trend chart; an "In plain words" summary is generated
+      from the data.
     </td>
   </tr>
   <tr>
@@ -96,7 +98,7 @@ The data pipeline and analytics dashboard (F1 - F3) are complete and live, and t
 | Dataset 2 vs iGA's Table 3 | **179** inconsistent values found in 2022, kept as published and flagged in the dashboard |
 | 2010 headline, derived from iGA's 12-month changes | December 2010 computed two ways agrees to **0.000** points |
 | Dataset 3 version | SHA-256 fingerprint matches the group's copy on every build |
-| Automated tests | **76** passing |
+| Automated tests | **82** passing |
 
 The held-out test questions are never run before the final evaluation.
 
