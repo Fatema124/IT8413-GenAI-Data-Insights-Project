@@ -11,11 +11,11 @@
 
 [![Open the live app](https://img.shields.io/badge/Open%20the%20live%20app-pricelens--bh.streamlit.app-13264a?style=for-the-badge&logo=streamlit&logoColor=white)](https://pricelens-bh.streamlit.app)
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-1f5fae?style=flat-square&logo=python&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-dashboard-1f5fae?style=flat-square&logo=streamlit&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-103%20passing-0f7a5c?style=flat-square)
-![Development checks](https://img.shields.io/badge/development%20checks-31%2F31-0f7a5c?style=flat-square)
-![Data](https://img.shields.io/badge/data-iGA%2C%20Kingdom%20of%20Bahrain-c9a227?style=flat-square)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-1f5fae?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-dashboard-1f5fae?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io)
+[![Tests](https://img.shields.io/badge/tests-103%20passing-0f7a5c?style=flat-square)](tests/test_pipeline.py)
+[![Development checks](https://img.shields.io/badge/development%20checks-31%2F31-0f7a5c?style=flat-square)](scripts/check_dev_answers.py)
+[![Data](https://img.shields.io/badge/data-iGA%2C%20Kingdom%20of%20Bahrain-c9a227?style=flat-square)](https://www.data.gov.bh)
 
 **IT8413 Generative AI for Data Insights · Group G2 · Bahrain Polytechnic** 🇧🇭
 
