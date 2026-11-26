@@ -1,4 +1,4 @@
-"""Streamlit analytics dashboard (F2 filtering + F3 visualisations).
+"""Streamlit analytics dashboard (F2 filtering + F3 visualisations), with questions over the data (F4).
 
 Usage inside the group's main app:
 
@@ -35,6 +35,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from src.dashboard import ask
 from src.dashboard import chart_data as cd
 from src.dashboard import explain as E
 from src.dashboard import visuals as V
@@ -984,8 +985,10 @@ def render_dashboard(data: PreparedData | None = None, show_header: bool = True)
     with _panel("summary"):
         summary_table(data, f)
 
-    spending, monthly, watch, sources = st.tabs(
-        ["Spending & drivers", "Months & years", "What to watch", "Data & sources"])
+    asking, spending, monthly, watch, sources = st.tabs(
+        ["Ask a question", "Spending & drivers", "Months & years", "What to watch", "Data & sources"])
+    with asking, _panel("ask"):
+        ask.render_ask(data)
     with spending, _panel("spending"):
         chart_composition(data, f)
     with monthly, _panel("monthly"):
