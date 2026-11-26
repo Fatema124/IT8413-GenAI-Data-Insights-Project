@@ -71,6 +71,47 @@ SOURCES = {
     },
 }
 
+# The document collection (sources 4-10), exactly as approved in the proposal (Section 2), for the
+# sources record (brief deliverable 6.2). Used by question answering over documents (F5); per the
+# proposal's terms B and C the files themselves are not committed to the public repository.
+MOIC_TERMS = "MOIC website Terms of Use"
+MOIC_TERMS_URL = "https://moic.gov.bh/en/node/2671"
+_MOIC_LAWS = "https://www.moic.gov.bh/en/regulations (section: Consumer Protection)"
+_IGA_PUBS = "https://www.iga.gov.bh/en/category/statistical-publications (Economic Statistics, Consumer Price Index)"
+DOCUMENTS = [
+    {"n": 4, "title": "Law No. (35) of 2012 with respect to Consumer Protection. English translation by the "
+                      "Legislation & Legal Opinion Commission, 14 pp. (not an official translation; Arabic "
+                      "prevails, p. 14)",
+     "publisher": "Ministry of Industry and Commerce (MOIC); translation by LLOC", "url": _MOIC_LAWS,
+     "terms": MOIC_TERMS, "terms_url": MOIC_TERMS_URL, "retrieved": "2026-10-27"},
+    {"n": 5, "title": "Law No. (28) of 2026 amending certain provisions of Law No. (35) of 2012. Arabic, "
+                      "Official Gazette No. 3889, 18/06/2026, pp. 34-36",
+     "publisher": "Ministry of Industry and Commerce (MOIC)", "url": _MOIC_LAWS,
+     "terms": MOIC_TERMS, "terms_url": MOIC_TERMS_URL, "retrieved": "2026-10-27"},
+    {"n": 6, "title": "Executive Regulation of Law No. 35 of 2012 (Ministerial Decision No. 66 of 2014). Arabic, "
+                      "Official Gazette No. 3165, 17/07/2014, pp. 11-27",
+     "publisher": "Ministry of Industry and Commerce (MOIC)", "url": _MOIC_LAWS,
+     "terms": MOIC_TERMS, "terms_url": MOIC_TERMS_URL, "retrieved": "2026-10-27"},
+    {"n": 7, "title": "Ministerial Order No. 51 of 2007 on sales discount controls. Arabic, Official Gazette "
+                      "No. 2807, 06/09/2007, pp. 10-12",
+     "publisher": "Ministry of Industry and Commerce (MOIC)", "url": _MOIC_LAWS,
+     "terms": MOIC_TERMS, "terms_url": MOIC_TERMS_URL, "retrieved": "2026-10-27"},
+    {"n": 8, "title": "Ministerial Order No. 14 of 2008 on non-manipulation of advertised prices. Arabic, "
+                      "Official Gazette No. 2833, 06/03/2008, p. 7",
+     "publisher": "Ministry of Industry and Commerce (MOIC)", "url": _MOIC_LAWS,
+     "terms": MOIC_TERMS, "terms_url": MOIC_TERMS_URL, "retrieved": "2026-10-27"},
+    {"n": 9, "title": "Consumer Price Index, September 2023: monthly release with methodology (10 pp., released "
+                      "30/10/2023); latest release listed on iGA's Statistical Publications page as of 27/10/2026",
+     "publisher": "Information & eGovernment Authority (iGA)", "url": _IGA_PUBS,
+     "terms": "iGA website Terms of Use", "terms_url": D3_TERMS_URL, "retrieved": "2026-10-27"},
+    {"n": 10, "title": "Know Your Right (إعرف حقك): published guidance for consumers and retailers on Law No. 35 "
+                       "of 2012 and its regulation. Bilingual leaflet, 12 pp., file dated 12/12/2016, issued under "
+                       "the Ministry's former name; it predates Law No. 28 of 2026",
+     "publisher": "Consumer Protection Directorate, Ministry of Industry, Commerce and Tourism (now MOIC)",
+     "url": "https://moic.gov.bh/sites/default/files/2021-09/Know%20your%20right.pdf",
+     "terms": MOIC_TERMS, "terms_url": MOIC_TERMS_URL, "retrieved": "2026-11-10"},
+]
+
 # How each `source` value in the prepared table is named in answers and on screen.
 SOURCE_NAMES = {
     "D1": "Dataset 1",

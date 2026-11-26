@@ -1,20 +1,21 @@
 # PriceLens BH - look and behaviour of the Streamlit app
+# A calm, official look: white filter panel, light grey page, navy and blue accents.
 [theme]
 base = "light"
-primaryColor = "#2a78d6"            # calm blue for buttons, sliders and selected filters
-backgroundColor = "#f4f6f9"         # light grey page, so the white cards and charts stand out
-secondaryBackgroundColor = "#e9edf2"
-textColor = "#0b0b0b"
-borderColor = "#dfe3ea"
+primaryColor = "#1f5fae"            # official blue for buttons, sliders and selected filters
+backgroundColor = "#f4f6f9"         # light grey page, so the white panels and charts stand out
+secondaryBackgroundColor = "#e9eef4"
+textColor = "#1b2433"               # dark slate text, softer on the eyes than pure black
+borderColor = "#dde3ec"
 font = "sans serif"
 
-# Dark filter panel (Streamlit >= 1.46 themes the sidebar separately)
+# Light filter panel (Streamlit >= 1.46 themes the sidebar separately)
 [theme.sidebar]
-backgroundColor = "#1d2432"
-secondaryBackgroundColor = "#2a3344"
-textColor = "#e9edf3"
-primaryColor = "#6ea8f5"
-borderColor = "#3a4558"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f1f4f8"
+textColor = "#1b2433"
+primaryColor = "#1f5fae"
+borderColor = "#dde3ec"
 
 [client]
 toolbarMode = "viewer"            # visitors see a clean page, without developer options

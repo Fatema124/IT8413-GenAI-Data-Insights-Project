@@ -3,19 +3,19 @@
 <a href="https://pricelens-bh.streamlit.app">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/banner-dark.svg">
-    <img src="docs/images/banner.svg" alt="PriceLens BH: cost-of-living monitor for Bahrain, with the headline CPI from January 2011 to August 2026" width="100%">
+    <img src="docs/images/banner.svg" alt="PriceLens BH, Bahrain cost-of-living monitor: headline CPI for all households, January 2010 (derived) to August 2026, latest 104.2" width="100%">
   </picture>
 </a>
 
-<br>
+<br><br>
 
-[![Open the live app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://pricelens-bh.streamlit.app)
+[![Open the live app](https://img.shields.io/badge/Open%20the%20live%20app-pricelens--bh.streamlit.app-13264a?style=for-the-badge&logo=streamlit&logoColor=white)](https://pricelens-bh.streamlit.app)
 
-![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-app-FF4B4B?logo=streamlit&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-82%20passing-2ea44f)
-![Development checks](https://img.shields.io/badge/development%20checks-31%2F31-2ea44f)
-![Data](https://img.shields.io/badge/data-iGA%20Bahrain-2a78d6)
+![Python](https://img.shields.io/badge/Python-3.10%2B-1f5fae?style=flat-square&logo=python&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-dashboard-1f5fae?style=flat-square&logo=streamlit&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-103%20passing-0f7a5c?style=flat-square)
+![Development checks](https://img.shields.io/badge/development%20checks-31%2F31-0f7a5c?style=flat-square)
+![Data](https://img.shields.io/badge/data-iGA%2C%20Kingdom%20of%20Bahrain-c9a227?style=flat-square)
 
 **IT8413 Generative AI for Data Insights · Group G2 · Bahrain Polytechnic** 🇧🇭
 
@@ -30,12 +30,19 @@
 
 <br>
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/stats-dark.svg">
+  <img src="docs/images/stats.svg" alt="At a glance: 10,376 monthly records prepared; 3 official iGA datasets; 68 spending categories plus the overall index; prices from 2010 to 2026; 100% match with iGA's own table (5,574 values); 103 automated tests passing" width="100%">
+</picture>
+
+<br><br>
+
 <div align="center">
   <a href="https://pricelens-bh.streamlit.app">
-    <img src="docs/images/dashboard-framed.png" alt="PriceLens BH dashboard: dark filter panel, header chart of overall prices, key-number cards with small trend charts and a plain-language summary" width="92%">
+    <img src="docs/images/dashboard-framed.png" alt="PriceLens BH dashboard: white filter panel in four steps, navy header with a chart of overall prices, key-number cards with small trend charts" width="96%">
   </a>
   <br>
-  <sub>The dashboard on Streamlit Community Cloud. Click the picture to open it.</sub>
+  <sub>The live dashboard on Streamlit Community Cloud. Click the picture to open it.</sub>
 </div>
 
 <br>
@@ -43,18 +50,19 @@
 ## ✨ What it does
 
 PriceLens BH turns Bahrain's official consumer price index into answers analysts can quote with confidence.
-The data pipeline and analytics dashboard (F1 - F3) are complete and live, and the tools the model will call are ready.
+The data pipeline and analytics dashboard (F1 – F3) are complete and live, and the tools the model will call are ready.
 
 <table>
   <tr>
     <td width="33%" valign="top">
       <h3>🔎 Filters in 4 steps</h3>
-      Quick periods or any range (2010 - Aug 2026), households, categories by hand or automatically (fastest rising,
-      fastest falling, largest share of spending) and the measure.
+      Quick periods or any range (Jan 2010 – Aug 2026), households, categories by hand or automatically (fastest
+      rising, fastest falling, largest share of spending) and the measure.
     </td>
     <td width="33%" valign="top">
-      <h3>📈 Four analytical views</h3>
-      Change over time, comparison between categories, basket composition with contributions, and a heatmap.
+      <h3>📈 Five analytical views</h3>
+      Change over time, comparison between categories, the spending basket with what drove prices, a month-by-month
+      heat map, and annual averages year by year.
     </td>
     <td width="33%" valign="top">
       <h3>🧮 Numbers in plain words</h3>
@@ -68,12 +76,14 @@ The data pipeline and analytics dashboard (F1 - F3) are complete and live, and t
       Every division scored against the four criteria in our proposal: rising fastest, furthest from base, large share of spending, different by nationality.
     </td>
     <td width="33%" valign="top">
-      <h3>⚠️ Data you can trust</h3>
-      Every figure traces back to the stored values and the dataset it came from; known problems in the source are flagged on screen.
+      <h3>🛡️ Data you can trust</h3>
+      Every figure traces back to the dataset it came from. Known problems in the source are flagged on screen,
+      empty views say why, and a "Before you quote a figure" box sets out the limits of use.
     </td>
     <td width="33%" valign="top">
-      <h3>☁️ Runs anywhere</h3>
-      Open it online, or start it on your own computer with one double-click on Windows or one command on macOS and Linux.
+      <h3>🏛️ Official look, runs anywhere</h3>
+      A calm design with readable contrast, where colour is never the only signal. Open it online, or start it
+      locally with one double-click on Windows or one command on macOS and Linux.
     </td>
   </tr>
 </table>
@@ -86,7 +96,7 @@ The data pipeline and analytics dashboard (F1 - F3) are complete and live, and t
 | Question answering over data | F4 · F6 · F8 | 🔧 Model tools ready ([`tools.py`](src/pipeline/tools.py)); model next |
 | Document retrieval, citations and refusal | F5 · F7 | ⏳ Coming next |
 | Query log, configuration display and report export | F9 · F10 | ⏳ Coming next |
-| Evaluation runs, vendor benchmark and enhancements | - | ⏳ Coming next |
+| Evaluation runs, vendor benchmark and enhancements | – | ⏳ Coming next |
 
 ## ✅ Verified against the source
 
@@ -98,7 +108,7 @@ The data pipeline and analytics dashboard (F1 - F3) are complete and live, and t
 | Dataset 2 vs iGA's Table 3 | **179** inconsistent values found in 2022, kept as published and flagged in the dashboard |
 | 2010 headline, derived from iGA's 12-month changes | December 2010 computed two ways agrees to **0.000** points |
 | Dataset 3 version | SHA-256 fingerprint matches the group's copy on every build |
-| Automated tests | **82** passing |
+| Automated tests | **103** passing |
 
 The held-out test questions are never run before the final evaluation.
 
@@ -121,7 +131,7 @@ Or run `python -m scripts.download_sources` to fetch it from iGA's website (its 
 
 #### 2 · Add the Gemini API key
 
-Needed by the question-answering features (F4 - F8); the dashboard runs without it.
+Needed by the question-answering features (F4 – F8); the dashboard runs without it.
 Create `.streamlit/secrets.toml` (git-ignored, never committed):
 
 ```toml
@@ -167,7 +177,7 @@ Full details: [`docs/data_pipeline.md`](docs/data_pipeline.md).
 ## 💬 Question answering
 
 > 🚧 *This section will be completed by the question-answering team: how to ask questions over the data and the
-> documents (F4 - F8), the model used, and example questions and answers.*
+> documents (F4 – F8), the model used, and example questions and answers.*
 
 <!-- Eman / Abrar: add the question-answering description, the model and provider, and screenshots here. -->
 
@@ -182,14 +192,15 @@ Full details: [`docs/data_pipeline.md`](docs/data_pipeline.md).
 
 | # | Source (publisher: iGA) | Used for | Terms |
 |---|---|---|---|
-| 1 | [CPI - Division and Group - Index Number](https://www.data.gov.bh/explore/dataset/01-consumer-price-index-division-and-group-index-number/) | National index, 69 categories | Bahrain Open Government Data License v1.0 |
+| 1 | [CPI - Division and Group - Index Number](https://www.data.gov.bh/explore/dataset/01-consumer-price-index-division-and-group-index-number/) | National index: overall + 68 categories | Bahrain Open Government Data License v1.0 |
 | 2 | [CPI, Division - Index Numbers by Nationality](https://www.data.gov.bh/explore/dataset/02-cpi-division-index-number-by-nationality/) | Bahraini vs non-Bahraini index | Bahrain Open Government Data License v1.0 |
-| 3 | [CPI Tables, Jan 2020 - Oct 2023](https://www.iga.gov.bh/en/Media/Others/Statistical%20Publications/Economic%20Statistics/CPI/CPI-Tables-%20Jan2020-Oct%202023.xlsx) (XLSX download) | Expenditure weights, headline 2011 - 2016 (2010 derived), cross-checks | iGA website Terms of Use (not redistributed) |
+| 3 | [CPI Tables, Jan 2020 – Oct 2023](https://www.iga.gov.bh/en/Media/Others/Statistical%20Publications/Economic%20Statistics/CPI/CPI-Tables-%20Jan2020-Oct%202023.xlsx) (XLSX download) | Expenditure weights, headline 2011 – 2016 (2010 derived), cross-checks | iGA website Terms of Use (not redistributed) |
 
-The working copy covers **January 2017 - August 2026**, as in the approved proposal. Which values the pipeline
-changes, and why, is listed in [`docs/data_pipeline.md`](docs/data_pipeline.md); every check is in
-[`docs/quality_report.md`](docs/quality_report.md); download dates, versions and terms are in
-[`docs/sources.md`](docs/sources.md).
+Datasets 1 – 2 cover **January 2017 – August 2026** (nationality figures from May 2019), as in the approved
+proposal; Dataset 3 takes the overall index back to January 2011, and 2010 is derived from its 12-month changes.
+Which values the pipeline changes, and why, is listed in [`docs/data_pipeline.md`](docs/data_pipeline.md); every
+check is in [`docs/quality_report.md`](docs/quality_report.md); download dates, versions and terms of every
+dataset **and of the seven documents** used for questions over documents are in [`docs/sources.md`](docs/sources.md).
 
 > [!NOTE]
 > Contains data from the Information & eGovernment Authority (iGA), Kingdom of Bahrain, via www.data.gov.bh,
@@ -231,7 +242,7 @@ run_app.bat/.sh    one-click start
 | Member | Leads |
 |---|---|
 | **Eman Khamdan** | Question answering over data (F4, F6, F8) · test set and evaluation runs · repository and credentials |
-| **Fatema Alashiri** | Data pipeline and dashboard (F1 - F3) · query log and report export (F9, F10) · vendor benchmark · enhancements · presentation |
+| **Fatema Alashiri** | Data pipeline and dashboard (F1 – F3) · query log and report export (F9, F10) · vendor benchmark · enhancements · presentation |
 | **Abrar Alawadhi** | Document retrieval, citations and refusal (F5, F7) · sources file · failure analysis · responsible AI · project report |
 
 <br>

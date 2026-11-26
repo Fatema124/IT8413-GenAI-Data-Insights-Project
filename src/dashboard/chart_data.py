@@ -52,6 +52,12 @@ def comparison(cpi: pd.DataFrame, f: A.Filters, by_nationality: bool = False) ->
         t["code"], t["name"] = code, A.name_of(cpi, code)
         t["group"] = t["population"]
         rows.append(t[["code", "name", "value", "display", "group"]])
+    national_only = [c for c in f.codes if c not in d2_codes]   # detailed items: all households only
+    if national_only:
+        t = A.compare_categories(cpi, f.end, measure, codes=national_only, population=config.NATIONAL)
+        t["group"] = config.NATIONAL
+        rows.append(t[["code", "name", "value", "display", "group"]])
+    rows = [r for r in rows if len(r)]
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame(
         columns=["code", "name", "value", "display", "group"])
 
@@ -192,10 +198,130 @@ def _combine(parts: list[pd.DataFrame]) -> pd.DataFrame:
     return out[_FLAG_COLUMNS].sort_values(["code", "population", "period"]).reset_index(drop=True)
 
 
+LAG_MONTHS = {"index": 0, "base": 0, "mom": 1, "yoy": 12}
+
+
+def annual_table(cpi: pd.DataFrame, f: A.Filters, max_years: int = 6) -> pd.DataFrame:
+    """Annual averages of the selected categories for the complete calendar years in the period.
+
+    Uses A.annual_average (all 12 months or nothing), the same function the model tools use, so the
+    dashboard and the answers agree. The last column compares the latest complete year with the year
+    before (that year may lie just before the period). attrs: years shown, years left out as incomplete.
+    """
+    codes, _ = usable_codes(cpi, f)
+    in_period = list(range(pd.Timestamp(f.start).year, pd.Timestamp(f.end).year + 1))
+    avgs: dict[str, dict[int, float]] = {}
+    for code in codes:
+        avgs[code] = {}
+        for year in [in_period[0] - 1] + in_period:
+            try:
+                avgs[code][year] = A.annual_average(cpi, code, year, f.population)["annual_average"]
+            except A.DataUnavailable:
+                pass
+    complete = sorted({y for a in avgs.values() for y in a if y in in_period})
+    left_out = [y for y in in_period if y not in complete]
+    years = complete[-max_years:]
+    out = pd.DataFrame()
+    if years:
+        last = years[-1]
+        change_col = f"{last} vs {last - 1} (%)"
+        rows = []
+        for code in codes:
+            a = avgs[code]
+            row = {"code": code, "name": A.name_of(cpi, code)}
+            row.update({str(y): a.get(y) for y in years})
+            row[change_col] = (round((a[last] / a[last - 1] - 1) * 100, 4)
+                               if last in a and (last - 1) in a else None)
+            rows.append(row)
+        out = pd.DataFrame(rows)
+        out.attrs["change_col"] = change_col
+    out.attrs["years"], out.attrs["left_out"] = years, left_out
+    return out
+
+
+def coverage(cpi: pd.DataFrame, weights: pd.DataFrame) -> pd.DataFrame:
+    """What each dataset covers, computed from the prepared data (not typed in), for the Data tab."""
+    def months(rows):
+        return f"{rows['period'].min():%b %Y} – {rows['period'].max():%b %Y}"
+
+    def cats(rows):
+        n = rows.groupby("level")["code"].nunique()
+        parts = ["overall index"] if n.get(0) else []
+        if n.get(1):
+            parts.append(f"{n[1]} main groups")
+        if n.get(2, 0) + n.get(3, 0):
+            parts.append(f"{n.get(2, 0) + n.get(3, 0)} detailed items")
+        return ", ".join(parts)
+
+    out = []
+    d1 = cpi[cpi["source"] == "D1"]
+    out.append({"Dataset": "1", "Households": "All households", "Categories": cats(d1), "Months": months(d1),
+                "Rows": len(d1), "Missing values (shown as gaps)": int(d1["index"].isna().sum())})
+    d2 = cpi[cpi["source"] == "D2"]
+    out.append({"Dataset": "2", "Households": "Bahraini; non-Bahraini", "Categories": cats(d2) + " (each)",
+                "Months": months(d2), "Rows": len(d2), "Missing values (shown as gaps)": int(d2["index"].isna().sum())})
+    d3 = cpi[cpi["source"].isin(["D3", "D3-derived"])]
+    derived = cpi[cpi["source"] == "D3-derived"]
+    out.append({"Dataset": "3 · Table 1", "Households": "All households", "Categories": "overall index",
+                "Months": months(d3) + (f" ({derived['period'].min():%Y} derived)" if len(derived) else ""),
+                "Rows": len(d3), "Missing values (shown as gaps)": int(d3["index"].isna().sum())})
+    out.append({"Dataset": "3 · Table 2.01", "Households": "All households (one national basket)",
+                "Categories": f"spending weights for {len(weights)} categories", "Months": "fixed",
+                "Rows": len(weights), "Missing values (shown as gaps)": int(weights["weight"].isna().sum())})
+    return pd.DataFrame(out)
+
+
+def first_value_month(cpi: pd.DataFrame, population: str, codes: list[str], measure: str) -> pd.Timestamp | None:
+    """First month in which any of these categories has a value for the measure (None: never)."""
+    have = cpi[(cpi["population"] == population) & cpi["code"].isin(codes) & cpi["index"].notna()]
+    if have.empty:
+        return None
+    return pd.Timestamp(have["period"].min()) + pd.DateOffset(months=LAG_MONTHS[measure])
+
+
+def contributions_from(cpi: pd.DataFrame) -> pd.Timestamp:
+    """First month with contributions: the spending groups' first yearly change (January 2018)."""
+    groups = cpi[(cpi["population"] == config.NATIONAL) & (cpi["level"] == 1) & cpi["index"].notna()]
+    return pd.Timestamp(groups["period"].min()) + pd.DateOffset(months=12)
+
+
+def month_ticks(start, end) -> list[pd.Timestamp]:
+    """Months to label on a time axis, never outside start..end (the data ends in August 2026).
+
+    Long ranges get Januaries (every second year past nine years); shorter ranges every 1, 3 or 6 months.
+    """
+    start, end = pd.Timestamp(start).replace(day=1), pd.Timestamp(end).replace(day=1)
+    n = (end.year - start.year) * 12 + end.month - start.month + 1
+    if n > 48:
+        years = [y for y in range(start.year, end.year + 1) if pd.Timestamp(year=y, month=1, day=1) >= start]
+        if len(years) > 9:
+            years = [y for y in years if y % 2 == 0]
+        return [pd.Timestamp(year=y, month=1, day=1) for y in years]
+    step = 1 if n <= 8 else 3 if n <= 18 else 6
+    return [p for p in pd.date_range(start, end, freq="MS") if (p.month - 1) % step == 0]
+
+
+def spread_labels(values, axis_values, plot_px: float, gap_px: float = 15) -> list[float]:
+    """y positions for end-of-line labels, pushed apart so no two are closer than gap_px.
+
+    Positions keep the order of the values; axis_values (all values on the axis) give the pixel scale.
+    """
+    v = pd.Series(values, dtype=float).reset_index(drop=True)
+    axis = pd.Series(axis_values, dtype=float).dropna()
+    gap = ((axis.max() - axis.min()) or 1.0) * gap_px / plot_px
+    out = v.copy()
+    prev = None
+    for i in v.sort_values(ascending=False).index:      # top label first, each next one at least a gap lower
+        if prev is not None and out[prev] - out[i] < gap:
+            out[i] = out[prev] - gap
+        prev = i
+    return out.tolist()
+
+
 def month_span(periods) -> str:
-    """'Jan 2022' or 'Jan 2022 - Jun 2022'."""
+    """'Jan 2022' or 'Jan 2022 – Jun 2022'."""
     lo, hi = pd.Timestamp(min(periods)), pd.Timestamp(max(periods))
-    return f"{lo:%b %Y}" if lo == hi else f"{lo:%b %Y} - {hi:%b %Y}"
+    return f"{lo:%b %Y}" if lo == hi else f"{lo:%b %Y} – {hi:%b %Y}"
 
 
 def caution_text(flags: pd.DataFrame) -> str:

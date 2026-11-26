@@ -130,7 +130,7 @@ from ready-made choices (tutor feedback at the build checkpoint, 25/11/2026).
 | Step | Filter | Options |
 |---|---|---|
 | 1 | Time period | Presets: last 12 months, last 3 years, last 5 years, since April 2019, all years; or **Custom** (any months, Jan 2010 - Aug 2026). Before 2017 only the headline exists; 2010 is derived |
-| 2 | Households | All households (national), Bahraini, non-Bahraini; option to compare all three side by side |
+| 2 | Households | All households (national), Bahraini, non-Bahraini; option to compare all three side by side (detailed items have no household split, so they show all households only, and the chart says so) |
 | 3 | Detail | Main groups (12 divisions), detailed items, or both (national only) |
 | 3 | Within | Narrow the detailed items to one main group (e.g. only the items inside Food) |
 | 3 | How to choose | By hand (up to 8), or automatically: fastest rising, fastest falling, largest share of spending (3 - 8 categories), with the overall index as a reference |
@@ -154,11 +154,17 @@ out and the user is told.
 | 3 | Basket weights (horizontal bar chart) and contribution of each division to headline YoY | Composition | categories (highlighted), end month (contributions); see 5.1 |
 | 4 | Heatmap of the measure by category and month | Distribution | all filters |
 | + | Monitoring priorities table: each division against the four criteria in the proposal | Supports the decision | categories, households, end month (ranks across all 12 divisions) |
+| + | Year by year: annual average price level of each complete calendar year in the period (latest 6) and the change from the year before, computed with the same `annual_average` function the model tools use | Comparison between periods (proposal: "including annual averages") | period, categories, households |
+| + | Data & sources: "Before you quote a figure" (limits of use, addressed to users), the sources with terms, and a coverage table counted from the prepared data (rows, months, categories, missing values per dataset) | Limits of use; what the data covers | - |
 
 The header shows overall prices for the selected households across every available month, with the
 selected period highlighted, so the user sees where the period sits in the longer history. Each key-number
-card carries a small chart of the same measure (last 3 years, last 12 months, last 2 years, the selected
-period); gaps stay gaps. Every chart states the question it answers and how to read it in one line; why each chart type was chosen
+card carries a small chart of the same measure (3 years, 12 months and 2 years up to the end of the period,
+then the selected period); gaps stay gaps. Every chart states the question it answers and how to read it in
+one line, worded for the measure on screen. Time axes label only months inside the data (never after
+August 2026). Lines carry an end label only when there are four or fewer, and those labels are spaced so
+they never overlap; with more lines the legend names them. When a period has no figures for the measure (e.g. Bahraini households before May 2019, or a yearly change before its first year), one note at the top says why and what to choose, and each empty chart says so in one line; contributions and the watch list say from which month they exist (January 2018 nationally; May 2020 for the watch list by nationality). The CSV download opens cleanly in Excel. Spending weights and contributions are
+national only (iGA publishes no weights by nationality), and the page says so. Why each chart type was chosen
 is recorded in [`docs/chart_choices.md`](chart_choices.md). A glossary ("What do these numbers mean?")
 explains index, base period, the three changes, weights and contributions in plain words.
 
@@ -180,6 +186,18 @@ chart beside it is computed at the end month of the selected range. When Bahrain
 are selected, the dashboard says that the national basket is used. All other displays (trend, comparison,
 heatmap, summary figures and priority table) respond to every filter. The same explanation is shown as a
 caption under the chart.
+
+### 5.3 Look and feel (design decision)
+
+The users are government analysts and the people they reply to, so the page is designed to look like an
+official report rather than a consumer app: a white filter panel on a light grey page, a navy header, one
+calm blue accent for everything you can click (`.streamlit/config.toml`), cool greys for text and chart
+axes, and no emoji in labels (small line icons instead). Text meets WCAG AA contrast (4.5:1 or more; the
+lowest is 4.7:1, axis labels). Colour never carries meaning on its own: rises and falls also have ▲ / ▼
+and words, and every chart has a sentence that says how to read it. Movement is limited to a short fade-in
+and the header line drawing once; it is switched off for people whose computer asks for reduced motion.
+Chart colours come from a palette checked for colour-blind readers, and a category keeps its colour
+whatever else is selected.
 
 ### 5.2 Data caution for Dataset 2's 2022 values
 

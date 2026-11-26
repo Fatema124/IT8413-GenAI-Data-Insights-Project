@@ -55,7 +55,7 @@ def spark_line(values: list, colour: str, width: int = 150, height: int = 40, re
            f"<stop offset='1' stop-color='{colour}' stop-opacity='0'/></linearGradient></defs>"]
     if ref is not None and lo <= ref <= hi:
         ry = pad + (height - 2 * pad) * (1 - (ref - lo) / span)
-        out.append(f"<line x1='0' y1='{ry:.1f}' x2='{width}' y2='{ry:.1f}' stroke='#c3c2b7' "
+        out.append(f"<line x1='0' y1='{ry:.1f}' x2='{width}' y2='{ry:.1f}' stroke='#c5ccd6' "
                    "stroke-width='1' stroke-dasharray='3 3'/>")
     for seg in segs:
         if len(seg) < 2:
@@ -86,7 +86,7 @@ def spark_bars(values: list, width: int = 150, height: int = 40, up: str = "#e34
     zero = height * top / span
     out = [f"<svg class='pl-spark' viewBox='0 0 {width} {height}' preserveAspectRatio='none' "
            "xmlns='http://www.w3.org/2000/svg'>",
-           f"<line x1='0' y1='{zero:.1f}' x2='{width}' y2='{zero:.1f}' stroke='#c3c2b7' stroke-width='1'/>"]
+           f"<line x1='0' y1='{zero:.1f}' x2='{width}' y2='{zero:.1f}' stroke='#c5ccd6' stroke-width='1'/>"]
     for i, v in enumerate(vals):
         if v is None:
             continue
@@ -153,6 +153,6 @@ def hero_chart(series: pd.Series, derived: pd.Series, start, end, colour: str = 
         "stroke-width='2.5' stroke-linejoin='round' stroke-linecap='round'/>"
         f"<circle class='pl-hpulse' cx='{ex:.1f}' cy='{ey:.1f}' r='5' fill='none' stroke='{colour}' "
         "stroke-width='2'/>"
-        f"<circle cx='{ex:.1f}' cy='{ey:.1f}' r='4.5' fill='{colour}' stroke='#1d2432' stroke-width='2'/>"
+        f"<circle cx='{ex:.1f}' cy='{ey:.1f}' r='4.5' fill='{colour}' stroke='#13264a' stroke-width='2'/>"
         f"<text x='{ex + 9:.1f}' y='{ey + 4:.1f}' class='pl-hval'>{s.iloc[-1]:.1f}</text>"
         + ticks + "</svg>")

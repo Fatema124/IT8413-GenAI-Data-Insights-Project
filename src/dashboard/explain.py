@@ -106,9 +106,70 @@ CHARTS = {
         "why": "A heat map shows many months and categories at once, so patterns such as a seasonal rise "
                "or one unusual month stand out. Brief F3: distribution.",
     },
+    "years": {
+        "title": "How did whole years compare?",
+        "short": "Average price level of each complete calendar year (April 2019 = 100), and the change "
+                 "from the year before.",
+        "type": "Table · annual averages",
+        "read": "Each row is one category; each year column is the average of its 12 monthly price levels.",
+        "why": "Replies often compare this year with earlier ones; an annual average smooths out single months. "
+               "Proposal: comparisons between periods, including annual averages.",
+    },
 }
 
+# Limits of use, written to the people who quote these figures (brief, Responsible AI: limits of use).
+LIMITS = [
+    "These figures show how prices **have already changed**. They do not forecast where prices are going.",
+    "They are **index numbers for groups of households**, not prices of products or shops, and not the costs "
+    "of any one household.",
+    "There are **no figures by governorate, income, household size or type of shop**. Bahraini and "
+    "non-Bahraini figures exist only for the overall index and the 12 main groups, from May 2019.",
+    "Spending categories start in **January 2017**. The overall index starts in January 2011; **2010 is "
+    "derived** from iGA's 12-month changes, not published.",
+    "Changes, averages, rankings, contributions and the watch list are **our own calculations** from the "
+    "published index, not official iGA figures. Contributions are an approximation.",
+    "Values marked **⚠** differ from iGA's own published table. Check them before using them.",
+    "**Before quoting a figure in a public reply**, check it against the iGA source linked below.",
+]
+
 _SMALL = {"and", "or", "of", "for", "the", "to", "in", "on", "by", "with", "a", "an"}
+
+
+_BY_MEASURE = {
+    "trend": {
+        "index": (None, "Each line is one category. The dashed line marks April 2019 = 100."),
+        "base": (None, "Each line is one category. The dashed line marks the April 2019 level (0%)."),
+        "mom": (None, "Each line is one category. The dashed line marks no change (0%)."),
+        "yoy": (None, "Each line is one category. The dashed line marks no change (0%)."),
+    },
+    "comparison": {
+        "index": (None, "Each bar is a category's price level at the end of your period. The grey line marks "
+                        "April 2019 = 100; bars that stop short of it are below that level."),
+        "base": (None, "Longer bars mean prices rose more since April 2019; bars left of zero mean prices "
+                       "are lower than then."),
+        "mom": (None, "Longer bars mean prices rose more since the month before; bars left of zero mean "
+                      "prices fell."),
+        "yoy": (None, "Longer bars mean prices rose more over the year; bars left of zero mean prices fell."),
+    },
+    "heatmap": {
+        "index": ("How high were prices, month by month?",
+                  "Red means prices were above their April 2019 level (100), blue below, grey about the same. "
+                  "Hover over a square for its value."),
+        "base": ("How high were prices, month by month?",
+                 "Red means prices were higher than in April 2019, blue lower, grey about the same. "
+                 "Hover over a square for its value."),
+        "mom": (None, "Red means prices rose from the month before, blue fell, grey little change. "
+                      "Hover over a square for its value."),
+        "yoy": (None, "Red means prices were higher than a year earlier, blue lower, grey about the same. "
+                      "Hover over a square for its value."),
+    },
+}
+
+
+def chart_text(key: str, measure: str | None = None) -> tuple[str, str]:
+    """(title, one-line explanation) for a chart, worded for the measure on screen."""
+    title, short = _BY_MEASURE.get(key, {}).get(measure, (None, None))
+    return title or CHARTS[key]["title"], short or CHARTS[key]["short"]
 
 
 def display_name(name: str) -> str:
@@ -169,6 +230,40 @@ def period_sentence(pct, start, end) -> str:
     return f"Prices {'rose' if pct > 0 else 'fell'} {abs(pct):.1f}% from {month(start)} to {month(end)}."
 
 
+POP_WORDS = {"National": "all households", "Bahraini": "Bahraini households",
+             "Non-Bahraini": "non-Bahraini households"}
+
+
+def why_empty(cpi: pd.DataFrame, f: A.Filters, codes: list[str] | None = None, measure: str | None = None) -> str:
+    """Why a chart or figure has nothing to show, and what to choose instead (one or two plain sentences)."""
+    measure = measure or f.measure
+    codes = codes or f.codes
+    pop = POP_WORDS[f.population]
+    have = cpi[(cpi["population"] == f.population) & cpi["code"].isin(codes) & cpi["index"].notna()]
+    if have.empty:
+        return f"These categories are not published for {pop}."
+    first = pd.Timestamp(have["period"].min())
+    if pd.Timestamp(f.end) < first:
+        return f"Figures for {pop} start in {month(first)}. Choose a period that ends in {month(first)} or later."
+    lag = {"mom": (1, "The change from the previous month needs the month before"),
+           "yoy": (12, "The change from a year earlier needs the same month one year before")}.get(measure)
+    if lag:
+        starts = first + pd.DateOffset(months=lag[0])
+        if pd.Timestamp(f.end) < starts:
+            return (f"{lag[1]}, so for {pop} it starts in {month(starts)}. Choose a period that ends in "
+                    f"{month(starts)} or later, or show the price level.")
+    return "Nothing to show for this selection."
+
+
+def selection_reason(cpi: pd.DataFrame, f: A.Filters) -> str | None:
+    """Why the selection has no value at the end of the period for the measure; None when it has one."""
+    have = cpi[(cpi["population"] == f.population) & cpi["code"].isin(f.codes) & cpi["index"].notna()]
+    lag = {"mom": 1, "yoy": 12}.get(f.measure, 0)
+    if have.empty or pd.Timestamp(f.end) < pd.Timestamp(have["period"].min()) + pd.DateOffset(months=lag):
+        return why_empty(cpi, f)
+    return None
+
+
 def key_findings(cpi: pd.DataFrame, weights: pd.DataFrame | None, f: A.Filters,
                  flagged_codes: set[str] | None = None) -> list[str]:
     """Three to four plain sentences about the current selection (they follow every filter)."""
@@ -186,8 +281,7 @@ def key_findings_tagged(cpi: pd.DataFrame, weights: pd.DataFrame | None, f: A.Fi
     than = {"yoy": "than a year earlier", "mom": "than the month before", "base": f"than in {BASE_LABEL}"}[m]
     short = MEASURES[m]["short"]
     end, out = month(f.end), []
-    pop = {"National": "all households", "Bahraini": "Bahraini households",
-           "Non-Bahraini": "non-Bahraini households"}[f.population]
+    pop = POP_WORDS[f.population]
     try:
         h = A.change(cpi, config.HEADLINE_CODE, f.end, m, f.population)
         if abs(h.value) < 0.05:
@@ -197,37 +291,48 @@ def key_findings_tagged(cpi: pd.DataFrame, weights: pd.DataFrame | None, f: A.Fi
             out.append(("overall", f"In {end}, overall prices for {pop} were **{abs(h.value):.1f}% {word}**"
                                    f"{warn(config.HEADLINE_CODE)} {than}."))
     except A.DataUnavailable:
-        pass
+        pass                       # the page explains once, at the top, why there is no value
     selected = [c for c in f.codes if c != config.HEADLINE_CODE]
     if selected:
         t = A.compare_categories(cpi, f.end, m, codes=selected, population=f.population).dropna(subset=["value"])
         if len(t) == 1:
             one = t.iloc[0]
             out.append(("up" if one["value"] >= 0 else "down",
-                        f"Your selected category, **{display_name(one['name'])}**, changed by "
-                        f"**{one['value']:+.1f}%**{warn(one['code'])} {short}."))
+                        f"Your selected category, **{display_name(one['name'])}**, "
+                        f"{'rose' if one['value'] > 0 else 'fell' if one['value'] < 0 else 'did not change'}"
+                        + (f" **{abs(one['value']):.1f}%**{warn(one['code'])} {short}." if one["value"] != 0
+                           else f"{warn(one['code'])} ({short}).")))
         elif len(t) >= 2:
             top = t.iloc[0]
             verb = ("rose the most" if top["value"] > 0.05 else
                     "did not change" if abs(top["value"]) < 0.05 else "fell the least")
-            out.append(("up", f"Of your selected categories, **{display_name(top['name'])}** {verb}: "
-                              f"**{top['value']:+.1f}%**{warn(top['code'])} {short}."))
+            out.append((_kind(top["value"]), f"Of your selected categories, **{display_name(top['name'])}** {verb}: "
+                                             f"**{top['value']:+.1f}%**{warn(top['code'])} {short}."))
         if len(t) >= 2:
             low = t.iloc[-1]
-            verb = "fell the most" if low["value"] < -0.05 else "rose the least"
-            out.append(("down", f"**{display_name(low['name'])}** {verb}: **{low['value']:+.1f}%**"
-                                f"{warn(low['code'])} {short}."))
+            verb = ("fell the most" if low["value"] < -0.05 else
+                    "did not change" if abs(low["value"]) < 0.05 else "rose the least")
+            out.append((_kind(low["value"]), f"**{display_name(low['name'])}** {verb}: **{low['value']:+.1f}%**"
+                                             f"{warn(low['code'])} {short}."))
     if weights is not None:
         try:
             c = A.contributions(cpi, weights, f.end).dropna(subset=["contribution_pts"])
             if len(c):
-                top = c.sort_values("contribution_pts", ascending=False).iloc[0]
-                out.append(("driver", f"Nationally, **{display_name(top['name'])}** added the most to the "
-                                      f"yearly change in overall prices ({top['contribution_pts']:+.2f} percentage "
-                                      f"points of {c.attrs['headline_yoy']:+.1f}%)."))
+                rising = c.attrs["headline_yoy"] >= 0
+                top = c.sort_values("contribution_pts", ascending=not rising).iloc[0]
+                did = ("added the most to the yearly change in overall prices" if rising
+                       else "did the most to pull overall prices down over the year")
+                out.append(("driver", f"Nationally, **{display_name(top['name'])}** {did} "
+                                      f"({top['contribution_pts']:+.2f} percentage points of "
+                                      f"{c.attrs['headline_yoy']:+.1f}%)."))
         except A.DataUnavailable:
             pass
     return out
+
+
+def _kind(value: float) -> str:
+    """Finding icon from the number itself: ▲ rose, ▼ fell, ● about the same."""
+    return "up" if value > 0.05 else "down" if value < -0.05 else "overall"
 
 
 def priority_reasons(row: pd.Series, rules: dict) -> str:

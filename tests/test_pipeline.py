@@ -432,7 +432,7 @@ def test_sentences_say_what_each_number_means():
     assert E.direction(-1.1) == ("down", "▼") and E.direction(104.2, "index")[0] == "up"
     assert E.sentence(None, "yoy").startswith("Not available")
     assert E.display_name("Actual Rentals For Housing*") == "Actual Rentals for Housing"
-    assert set(E.CHARTS) == {"trend", "comparison", "weights", "contributions", "heatmap"}
+    assert set(E.CHARTS) == {"trend", "comparison", "weights", "contributions", "heatmap", "years"}
 
 
 def test_findings_follow_the_filters(data):
@@ -478,3 +478,142 @@ def test_header_chart_follows_households_and_period(data):
     h = data.cpi[(data.cpi["code"] == "0") & (data.cpi["population"] == "Bahraini")].set_index("period")
     svg = V.hero_chart(h["index"], h["source"].eq("D3-derived"), pd.Timestamp("2024-01-01"), pd.Timestamp("2026-08-01"))
     assert "your period" in svg and f"{h['index'].dropna().iloc[-1]:.1f}" in svg
+
+
+# ---------------------------------------------------------------- chart axes and wording (checked on the live app)
+@pytest.mark.parametrize("start", ["2010-01", "2019-04", "2021-09", "2023-09", "2025-09", "2026-03", "2026-08"])
+def test_time_axis_never_labels_a_month_after_the_data(start):
+    ticks = cd.month_ticks(start, "2026-08")
+    assert ticks and min(ticks) >= pd.Timestamp(start) and max(ticks) <= pd.Timestamp("2026-08-01")
+    assert len(ticks) <= 9                                                 # readable in a half-width chart
+    src = (config.REPO_ROOT / "src" / "dashboard" / "page.py").read_text(encoding="utf-8")
+    assert "tickCount" not in src and "values=ticks" in src
+
+
+def test_chart_words_match_the_measure_on_screen():
+    from src.dashboard import explain as E
+    assert "April 2019 level (100)" in E.chart_text("heatmap", "index")[1]
+    assert "month before" in E.chart_text("heatmap", "mom")[1]
+    assert "a year earlier" in E.chart_text("heatmap", "yoy")[1]
+    assert E.chart_text("heatmap", "index")[0] != E.chart_text("heatmap", "yoy")[0]
+    assert "April 2019 = 100" in E.chart_text("trend", "index")[1] and "no change" in E.chart_text("trend", "yoy")[1]
+    assert E.chart_text("weights") == (E.CHARTS["weights"]["title"], E.CHARTS["weights"]["short"])
+
+
+def test_end_labels_never_overlap():
+    # default view, monthly change: All items and Housing both end at +0.2%
+    ys = cd.spread_labels([0.2, 1.8, 0.2, -0.5], [-1, 2, 0], 270)
+    px = sorted(y * 270 / 3 for y in ys)
+    assert all(b - a >= 15 - 1e-9 for a, b in zip(px, px[1:]))
+    assert cd.spread_labels([2.9, 8.2], [0, 9], 270) == [2.9, 8.2]           # far apart: left where they are
+
+
+def test_comparison_words_match_the_measure():
+    from src.dashboard import explain as E
+    assert "April 2019 = 100" in E.chart_text("comparison", "index")[1]
+    assert "left of zero" not in E.chart_text("comparison", "index")[1]
+    assert "month before" in E.chart_text("comparison", "mom")[1]
+
+
+# ---------------------------------------------------------------- empty and early periods say why (A-Z review)
+def test_empty_periods_explain_why_in_plain_words(data):
+    from src.dashboard import explain as E
+    T = pd.Timestamp
+    bh_early = A.Filters(T("2017-01-01"), T("2018-12-01"), ["0", "01"], "Bahraini", "yoy")
+    assert "start in May 2019" in E.selection_reason(data.cpi, bh_early)
+    bh_2019 = A.Filters(T("2019-01-01"), T("2019-12-01"), ["0", "01"], "Bahraini", "yoy")
+    assert "starts in May 2020" in E.selection_reason(data.cpi, bh_2019)
+    nat_2010 = A.Filters(T("2010-01-01"), T("2010-12-01"), ["0"], "National", "yoy")
+    assert "starts in January 2011" in E.selection_reason(data.cpi, nat_2010)
+    assert E.selection_reason(data.cpi, A.Filters(T("2010-01-01"), T("2010-12-01"), ["0"], "National", "index")) is None
+    assert E.selection_reason(data.cpi, A.Filters(T("2023-09-01"), T("2026-08-01"), ["0", "01"], "Bahraini", "yoy")) is None
+
+
+def test_first_months_for_contributions_and_watch_list(data):
+    assert cd.contributions_from(data.cpi) == pd.Timestamp("2018-01-01")
+    groups = data.labels.loc[data.labels["level"] == 1, "code"].tolist()
+    assert cd.first_value_month(data.cpi, "Bahraini", groups, "yoy") == pd.Timestamp("2020-05-01")
+    assert cd.first_value_month(data.cpi, "National", ["0"], "mom") == pd.Timestamp("2010-02-01")
+
+
+def test_three_groups_side_by_side_keeps_detailed_items(data):
+    f = A.Filters(pd.Timestamp("2025-01-01"), pd.Timestamp("2026-08-01"), ["01", "01.1"], "National", "yoy")
+    t = cd.comparison(data.cpi, f, by_nationality=True).dropna(subset=["value"])
+    assert set(t.loc[t["code"] == "01", "group"]) == {"National", "Bahraini", "Non-Bahraini"}
+    assert set(t.loc[t["code"] == "01.1", "group"]) == {"National"}         # no household split published
+
+
+def test_finding_icons_follow_the_number(data):
+    from src.dashboard import explain as E
+    assert (E._kind(2.0), E._kind(-2.0), E._kind(0.01)) == ("up", "down", "overall")
+    f = A.Filters(pd.Timestamp("2025-01-01"), pd.Timestamp("2026-08-01"), ["0", "01", "04", "07"], "National", "yoy")
+    for kind, text in E.key_findings_tagged(data.cpi, data.weights, f):
+        if "rose" in text and "Nationally" not in text:
+            assert kind == "up"
+        if "fell the most" in text:
+            assert kind == "down"
+
+
+def test_summary_csv_opens_cleanly_in_excel():
+    src = (config.REPO_ROOT / "src" / "dashboard" / "page.py").read_text(encoding="utf-8")
+    assert 'encode("utf-8-sig")' in src and "st.info(str(exc))" not in src
+
+
+
+# ---------------------------------------------------------------- brief-driven extras (26/11 review)
+def test_year_table_uses_the_same_annual_averages_as_the_model_tools(data):
+    f = A.Filters(pd.Timestamp("2019-01-01"), pd.Timestamp("2021-12-01"), ["0", "01"], "National", "yoy")
+    t = cd.annual_table(data.cpi, f)
+    assert t.attrs["years"] == [2019, 2020, 2021] and t.attrs["left_out"] == []
+    head = t.set_index("code").loc["0"]
+    assert head["2021"] == A.annual_average(data.cpi, "0", 2021)["annual_average"]
+    assert head["2021 vs 2020 (%)"] == pytest.approx(A.compare_annual_averages(data.cpi, "0", 2020, 2021)["change_pct"])
+
+
+def test_year_table_leaves_out_incomplete_years_and_says_so(data):
+    f = A.Filters(pd.Timestamp("2025-09-01"), pd.Timestamp("2026-08-01"), ["0"], "National", "yoy")
+    t = cd.annual_table(data.cpi, f)
+    assert t.attrs["years"] == [2025] and t.attrs["left_out"] == [2026]       # 2026 has only Jan-Aug
+    assert "2025 vs 2024 (%)" in t.columns                                   # compares with the year before
+    bh = cd.annual_table(data.cpi, A.Filters(pd.Timestamp("2019-01-01"), pd.Timestamp("2021-12-01"), ["0"],
+                                             "Bahraini", "yoy"))
+    assert bh.attrs["years"] == [2020, 2021] and 2019 in bh.attrs["left_out"]  # Bahraini starts May 2019
+    none = cd.annual_table(data.cpi, A.Filters(pd.Timestamp("2026-01-01"), pd.Timestamp("2026-08-01"), ["0"],
+                                               "National", "yoy"))
+    assert none.empty and none.attrs["left_out"] == [2026]
+
+
+def test_coverage_is_counted_from_the_data(data):
+    c = cd.coverage(data.cpi, data.weights)
+    assert c["Rows"].sum() == len(data.cpi) + len(data.weights)
+    assert c["Missing values (shown as gaps)"].sum() == int(data.cpi["index"].isna().sum())
+    assert "May 2019" in c.loc[c["Dataset"] == "2", "Months"].item()
+
+
+def test_limits_of_use_cover_what_the_proposal_says_to_decline():
+    from src.dashboard import explain as E
+    text = " ".join(E.LIMITS).lower()
+    for must in ["forecast", "governorate", "shops", "may 2019", "2010", "our own calculations", "before quoting"]:
+        assert must in text, must
+
+
+def test_sources_record_lists_every_dataset_and_document():
+    from scripts.write_sources import render
+    out = render()
+    assert [d["n"] for d in config.DOCUMENTS] == list(range(4, 11))
+    for doc in config.DOCUMENTS:
+        assert doc["publisher"] in out and doc["retrieved"][:4] == "2026"
+    assert out.count("| 13/10/2026 |") == 2 and "| 10/11/2026 |" in out
+
+
+def test_official_look_light_panel_and_no_emoji_labels():
+    import re
+    toml = (config.REPO_ROOT / ".streamlit" / "config.toml").read_text(encoding="utf-8")   # no tomllib: Python 3.10
+    assert re.search(r'^base = "light"', toml, re.M)
+    sidebar = toml.split("[theme.sidebar]", 1)[1].split("[", 1)[0]
+    assert re.search(r'^backgroundColor = "#ffffff"', sidebar, re.M | re.I)
+    src = (config.REPO_ROOT / "src" / "dashboard" / "page.py").read_text(encoding="utf-8")
+    body = src.split('CSS = """', 1)[0] + src.split('</style>\n"""', 1)[1]           # code outside the CSS
+    labels = re.findall(r'"([^"\n]*)"', body.split("st.set_page_config", 1)[0])
+    emoji = re.compile("[\U0001F300-\U0001FAFFℹ⬇⬆]")
+    assert not [t for t in labels if emoji.search(t)]                                # ⚠ marks data, so it stays

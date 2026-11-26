@@ -11,8 +11,8 @@ Run on its own:  streamlit run src/dashboard/page.py   (or double-click run_app.
 Design rules (tutor feedback, 25/11/2026: "readable for someone who is not an
 analyst"):
   * every number carries a plain-language sentence saying what it means;
-  * every chart says what question it answers, how to read it and why that
-    chart type was chosen;
+  * every chart says what question it answers and how to read it, worded for
+    the measure on screen (why each chart type was chosen: docs/chart_choices.md);
   * filters are grouped in numbered steps with presets, so nobody has to
     know the data to start;
   * notes about the data are short, calm and point to the details.
@@ -54,132 +54,137 @@ PICK_MODES = ("I'll choose",) + cd.AUTO_MODES
 # Visual style (validated categorical palette; colour follows the category)
 # --------------------------------------------------------------------------
 FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif"
-INK, INK_2, MUTED = "#0b0b0b", "#52514e", "#898781"
-GRID, AXIS, SURFACE = "#e1e0d9", "#c3c2b7", "#ffffff"
+INK, INK_2, MUTED = "#1b2433", "#3b4456", "#6b7486"      # slate inks, matching the page text
+GRID, AXIS, SURFACE = "#e6e9ef", "#c5ccd6", "#ffffff"
 SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
 HEADLINE_COLOUR = INK_2                  # the headline is the reference line: neutral ink
 POPULATION_COLOURS = {"National": "#2a78d6", "Bahraini": "#eb6834", "Non-Bahraini": "#1baf7a"}
-UP, DOWN, NEUTRAL = "#e34948", "#2a78d6", "#f0efec"   # diverging pair, grey midpoint
+UP, DOWN, NEUTRAL = "#e34948", "#2a78d6", "#eef0f3"   # diverging pair, grey midpoint
 MAX_CATEGORIES = 8                       # 8 palette colours (+ neutral headline): never cycled
 
 CSS = """
 <style>
+  /* Official look: navy header, white panels on a light grey page, one calm blue accent, cool greys. */
   html, body, [class*="css"] { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
   .block-container, [data-testid="stMainBlockContainer"] { padding-top: 2.2rem; padding-bottom: 3rem;
       max-width: 1280px; }
-  /* header: dark band that continues the dark filter panel */
-  .pl-hero { position: relative; overflow: hidden; border-radius: 20px; padding: 1.5rem 1.7rem 1.3rem;
+  /* header: navy band */
+  .pl-hero { position: relative; overflow: hidden; border-radius: 12px; padding: 1.45rem 1.7rem 1.25rem;
       margin-bottom: 1rem; color: #ffffff;
-      background: radial-gradient(1200px 300px at 85% -20%, rgba(110,168,245,0.35), transparent 60%),
-                  linear-gradient(135deg, #1d2432 0%, #1f2f4d 55%, #234a86 100%);
-      box-shadow: 0 10px 30px rgba(29,36,50,0.25); display: grid; grid-template-columns: 1.15fr 1fr;
-      gap: 1.2rem; align-items: center; }
-  .pl-hero .pl-kicker { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-      color: #8fbcf6; margin: 0 0 0.35rem; }
-  .pl-hero .pl-title { font-size: 2.3rem; font-weight: 750; margin: 0; color: #ffffff;
-      letter-spacing: -0.025em; line-height: 1.1; }
-  .pl-hero .pl-lead { color: #d6deea; font-size: 1rem; margin: 0.5rem 0 0.9rem; line-height: 1.45; }
-  .pl-hero .pl-chip { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.18); color: #dfe7f3; }
+      background: radial-gradient(900px 260px at 90% -30%, rgba(120,165,230,0.22), transparent 60%),
+                  linear-gradient(120deg, #13264a 0%, #183763 55%, #1f4f8f 100%);
+      box-shadow: 0 6px 18px rgba(19,38,74,0.18); display: grid; grid-template-columns: 1.15fr 1fr;
+      gap: 1.2rem; align-items: center; border-bottom: 3px solid #c9a227; }
+  .pl-hero .pl-kicker { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      color: #a9c6ee; margin: 0 0 0.35rem; }
+  .pl-hero .pl-title { font-size: 2.2rem; font-weight: 700; margin: 0; color: #ffffff;
+      letter-spacing: -0.02em; line-height: 1.1; }
+  .pl-hero .pl-lead { color: #d9e2ef; font-size: 1rem; margin: 0.5rem 0 0.9rem; line-height: 1.45; }
+  .pl-hero .pl-chip { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.20); color: #e1e8f2; }
   .pl-hero .pl-chip b { color: #ffffff; }
-  .pl-hero .pl-hc { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 14px; padding: 0.55rem 0.7rem 0.2rem; }
-  .pl-hero .pl-hc-t { font-size: 0.78rem; color: #b8c4d6; margin: 0 0 0.1rem; }
+  .pl-hero .pl-hc { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px; padding: 0.55rem 0.7rem 0.2rem; }
+  .pl-hero .pl-hc-t { font-size: 0.78rem; color: #bccadd; margin: 0 0 0.1rem; }
   .pl-hero .pl-hc-t b { color: #ffffff; }
   .pl-hero-chart { width: 100%; height: auto; display: block; }
-  .pl-hx { font-size: 10px; fill: #9fb0c8; }
-  .pl-hsel { font-size: 10px; fill: #dfe7f3; font-weight: 600; }
+  .pl-hx { font-size: 10px; fill: #a3b3c9; }
+  .pl-hsel { font-size: 10px; fill: #e1e8f2; font-weight: 600; }
   .pl-hval { font-size: 13px; fill: #ffffff; font-weight: 700; }
-  .pl-hline { stroke-dasharray: 1; animation: plDraw 2.6s cubic-bezier(.45,0,.2,1) .2s both; }
-  .pl-harea { animation: plFade 1s ease 2.2s both; }
-  .pl-hpulse { transform-box: fill-box; transform-origin: center; animation: plPulse 2.8s ease-out 2.8s infinite both; }
+  .pl-hline { stroke-dasharray: 1; animation: plDraw 2.2s cubic-bezier(.45,0,.2,1) .2s both; }
+  .pl-harea { animation: plFade 1s ease 1.9s both; }
+  .pl-hpulse { transform-box: fill-box; transform-origin: center; animation: plPulse 3s ease-out 2.4s 3 both; }
   @media (max-width: 900px) { .pl-hero { grid-template-columns: 1fr; } }
   .pl-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; }
-  .pl-chip { background: #ffffff; border: 1px solid #dcdad3; border-radius: 999px; padding: 0.18rem 0.7rem;
-      font-size: 0.8rem; color: #3d3c39; white-space: nowrap; }
-  .pl-chip b { color: #0b0b0b; font-weight: 600; }
-  .pl-chip.blue { background: #eaf2fc; border-color: #c9dcf6; color: #1b5aa6; }
-  /* section titles */
-  .pl-section { font-size: 1.15rem; font-weight: 650; color: #0b0b0b; margin: 1.3rem 0 0.15rem; }
-  .pl-section-sub { color: #6b6a66; font-size: 0.88rem; margin: 0 0 0.7rem; }
+  .pl-chip { background: #ffffff; border: 1px solid #d6dde7; border-radius: 999px; padding: 0.18rem 0.7rem;
+      font-size: 0.8rem; color: #3b4456; white-space: nowrap; }
+  .pl-chip b { color: #1b2433; font-weight: 600; }
+  /* section titles: a thin blue rule, like a printed report */
+  /* [data-testid="stMarkdownContainer"] raises these above Streamlit's own paragraph size */
+  [data-testid="stMarkdownContainer"] p.pl-section, .pl-section { font-size: 1.12rem; font-weight: 650; color: #13264a; margin: 1.4rem 0 0.15rem;
+      padding-left: 0.6rem; border-left: 4px solid #1f5fae; line-height: 1.3; }
+  [data-testid="stMarkdownContainer"] p.pl-section-sub, .pl-section-sub { color: #5b6475; font-size: 0.88rem; margin: 0.2rem 0 0.7rem; }
   /* key number cards */
-  .pl-card { background: #ffffff; border: 1px solid #e3e7ee; border-top: 4px solid var(--c, #2a78d6);
-      border-radius: 14px; padding: 0.85rem 1rem 0.85rem; min-height: 13rem;
-      box-shadow: 0 1px 3px rgba(16,24,40,0.06); transition: transform .2s ease, box-shadow .2s ease;
-      animation: plUp .5s ease both; animation-delay: var(--d, 0s); }
-  .pl-card:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(16,24,40,0.10); }
+  .pl-card { background: #ffffff; border: 1px solid #e1e6ee; border-top: 4px solid var(--c, #1f5fae);
+      border-radius: 10px; padding: 0.85rem 1rem 0.85rem; min-height: 13rem;
+      box-shadow: 0 1px 2px rgba(16,24,40,0.05); transition: box-shadow .2s ease, transform .2s ease;
+      animation: plUp .45s ease both; animation-delay: var(--d, 0s); }
+  .pl-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(16,24,40,0.08); }
   .pl-spark { width: 100%; height: 2.4rem; display: block; margin: 0.15rem 0 0.1rem; }
-  .pl-spark-cap { font-size: 0.7rem; color: #8a93a3; margin: 0 0 0.2rem; }
+  [data-testid="stMarkdownContainer"] p.pl-spark-cap, .pl-spark-cap { font-size: 0.72rem; line-height: 1.3; color: #5b6475; margin: 0 0 0.2rem; }
   .pl-card .top { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-  .pl-card .lbl { color: #3d3c39; font-size: 0.84rem; font-weight: 650; margin: 0; }
+  .pl-card .lbl { color: #3b4456; font-size: 0.84rem; font-weight: 650; margin: 0; }
   .pl-ico { width: 2.1rem; height: 2.1rem; border-radius: 50%; display: flex; align-items: center;
-      justify-content: center; background: var(--bg, #eaf2fc); flex: none; }
-  .pl-ico svg { width: 1.15rem; height: 1.15rem; stroke: var(--c, #2a78d6); fill: none; stroke-width: 2;
+      justify-content: center; background: var(--bg, #e8f0fa); flex: none; }
+  .pl-ico svg { width: 1.15rem; height: 1.15rem; stroke: var(--c, #1f5fae); fill: none; stroke-width: 2;
       stroke-linecap: round; stroke-linejoin: round; }
-  .pl-card .val { font-size: 2rem; font-weight: 650; color: #0b0b0b; margin: 0.15rem 0 0.25rem;
+  .pl-card .val { font-size: 2rem; font-weight: 650; color: #1b2433; margin: 0.15rem 0 0.25rem;
       letter-spacing: -0.02em; line-height: 1.15; }
-  .pl-card .say { color: #3d3c39; font-size: 0.86rem; margin: 0.35rem 0 0.5rem; line-height: 1.35; }
-  .pl-tag { display: inline-block; background: #f0efec; color: #52514e; border-radius: 6px;
+  .pl-card .say { color: #3b4456; font-size: 0.86rem; margin: 0.35rem 0 0.5rem; line-height: 1.35; }
+  .pl-tag { display: inline-block; background: #eef1f5; color: #4a5468; border-radius: 6px;
       padding: 0.08rem 0.45rem; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.01em; }
   .pl-dir { display: inline-block; border-radius: 999px; padding: 0.1rem 0.55rem; font-size: 0.78rem;
       font-weight: 650; margin-left: 0.15rem; vertical-align: middle; }
-  .pl-dir.up { background: #fdecec; color: #b42318; }
-  .pl-dir.down { background: #eaf2fc; color: #1b5aa6; }
-  .pl-dir.flat, .pl-dir.na { background: #f0efec; color: #52514e; }
+  .pl-dir.up { background: #fbeaea; color: #a3221b; }
+  .pl-dir.down { background: #e8f0fa; color: #1a4f94; }
+  .pl-dir.flat, .pl-dir.na { background: #eef1f5; color: #4a5468; }
   /* findings */
-  .pl-findings { background: #ffffff; border: 1px solid #e3e7ee; border-radius: 14px; padding: 0.9rem 1.1rem;
-      margin: 0.9rem 0 0.4rem; box-shadow: 0 1px 3px rgba(16,24,40,0.06); animation: plUp .5s ease .25s both; }
-  .pl-findings p.h { font-weight: 700; margin: 0 0 0.5rem; color: #0b0b0b; font-size: 1rem; }
-  .pl-find { display: flex; gap: 0.65rem; align-items: flex-start; margin: 0.38rem 0; color: #2b2a28;
+  .pl-findings { background: #ffffff; border: 1px solid #e1e6ee; border-radius: 10px; padding: 0.9rem 1.1rem;
+      margin: 0.9rem 0 0.4rem; box-shadow: 0 1px 2px rgba(16,24,40,0.05); animation: plUp .45s ease .2s both; }
+  .pl-findings p.h { font-weight: 700; margin: 0 0 0.5rem; color: #13264a; font-size: 1rem; }
+  .pl-find { display: flex; gap: 0.65rem; align-items: flex-start; margin: 0.38rem 0; color: #24303f;
       font-size: 0.93rem; line-height: 1.4; }
-  .pl-find .b { flex: none; width: 1.55rem; height: 1.55rem; border-radius: 8px; display: flex; align-items: center;
+  .pl-find .b { flex: none; width: 1.55rem; height: 1.55rem; border-radius: 6px; display: flex; align-items: center;
       justify-content: center; font-size: 0.78rem; font-weight: 800; margin-top: 0.05rem; }
-  .pl-find .b.overall { background: #eaf2fc; color: #1b5aa6; }
-  .pl-find .b.up { background: #fdecec; color: #b42318; }
-  .pl-find .b.down { background: #e6f4ff; color: #175cd3; }
-  .pl-find .b.driver { background: #fff4e0; color: #9a5b00; }
-  /* notes */
-  .pl-note { border-radius: 10px; padding: 0.55rem 0.85rem; margin: 0.35rem 0; font-size: 0.88rem;
-      line-height: 1.4; border: 1px solid; }
-  .pl-note.info { background: #f3f7fd; border-color: #d5e3f6; color: #23436b; }
-  .pl-note.caution { background: #fff8eb; border-color: #f3dfb3; color: #6b4a06; }
+  .pl-find .b.overall { background: #e8f0fa; color: #1a4f94; }
+  .pl-find .b.up { background: #fbeaea; color: #a3221b; }
+  .pl-find .b.down { background: #e8f0fa; color: #1a4f94; }
+  .pl-find .b.driver { background: #fbf3dc; color: #7a5a00; }
+  /* notes: a line icon, then the text */
+  .pl-note { display: flex; gap: 0.55rem; align-items: flex-start; border-radius: 8px; padding: 0.55rem 0.85rem;
+      margin: 0.35rem 0; font-size: 0.88rem; line-height: 1.45; border: 1px solid; border-left-width: 4px; }
+  .pl-note .pl-ni { flex: none; width: 1.05rem; height: 1.05rem; margin-top: 0.12rem; fill: none;
+      stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .pl-note.info { background: #f3f7fc; border-color: #d3e0f2; border-left-color: #1f5fae; color: #1f3a63; }
+  .pl-note.caution { background: #fdf8ec; border-color: #eedfb5; border-left-color: #b7860b; color: #5f4706; }
+  .pl-note.pl-block { display: block; }
+  .pl-note.pl-block .pl-note-h { display: flex; gap: 0.5rem; align-items: center; font-weight: 700; margin: 0; }
+  .pl-limits { margin: 0.4rem 0 0.1rem 1.6rem; padding: 0; }
+  [data-testid="stMarkdownContainer"] .pl-limits li, .pl-limits li { font-size: 0.88rem; margin: 0.2rem 0; line-height: 1.45; }
   /* chart headers */
   .pl-chart-h { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin: 1.1rem 0 0.1rem; }
-  .pl-chart-h .t { font-size: 1.12rem; font-weight: 650; color: #0b0b0b; }
-  .pl-chart-h .pl-when { color: #6b7280; font-size: 0.85rem; font-weight: 500; }
-  .pl-chart-read { color: #6b6a66; font-size: 0.84rem; margin: 0.05rem 0 0.4rem; }
+  .pl-chart-h .t { font-size: 1.08rem; font-weight: 650; color: #13264a; }
+  .pl-chart-h .pl-when { color: #5b6475; font-size: 0.85rem; font-weight: 500; }
+  [data-testid="stMarkdownContainer"] p.pl-chart-read, .pl-chart-read { color: #5b6475; font-size: 0.84rem; margin: 0.05rem 0 0.4rem; }
   /* panels: white boxes for charts and tables (keyed containers get the class st-key-<key>) */
-  div[class*="st-key-pl_panel"] { background: #ffffff; border-radius: 14px; padding: 0.4rem 0.9rem 0.6rem;
-      box-shadow: 0 1px 3px rgba(16,24,40,0.06); }
-  /* sidebar (dark, see .streamlit/config.toml) */
-  section[data-testid="stSidebar"] .pl-brand { display: flex; align-items: center; gap: 0.55rem; margin: 0 0 0.6rem; }
+  div[class*="st-key-pl_panel"] { background: #ffffff; border-radius: 10px; padding: 0.4rem 0.9rem 0.6rem;
+      box-shadow: 0 1px 2px rgba(16,24,40,0.05); }
+  /* filter panel (white, see .streamlit/config.toml) */
+  section[data-testid="stSidebar"] { border-right: 1px solid #dde3ec; }
+  section[data-testid="stSidebar"] .pl-brand { display: flex; align-items: center; gap: 0.55rem;
+      margin: 0 0 0.7rem; padding-bottom: 0.7rem; border-bottom: 3px solid #13264a; }
   section[data-testid="stSidebar"] .pl-brand svg { width: 1.9rem; height: 1.9rem; }
-  section[data-testid="stSidebar"] .pl-brand span { font-size: 1.05rem; font-weight: 700; color: #ffffff; }
+  section[data-testid="stSidebar"] .pl-brand span { font-size: 1.05rem; font-weight: 700; color: #13264a; }
   section[data-testid="stSidebar"] .pl-step { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.08em;
-      text-transform: uppercase; color: #8fbcf6; margin: 1.15rem 0 0.25rem; padding-top: 0.7rem;
-      border-top: 1px solid #333d50; }
-  section[data-testid="stSidebar"] .pl-side-h { font-size: 1.1rem; font-weight: 700; margin: 0; color: #ffffff; }
-  section[data-testid="stSidebar"] .pl-side-sub { color: #aab4c3; font-size: 0.82rem; margin: 0.1rem 0 0.2rem; }
-  /* make the active period / detail button obvious on the dark panel */
+      text-transform: uppercase; color: #1f5fae; margin: 1.15rem 0 0.25rem; padding-top: 0.7rem;
+      border-top: 1px solid #e3e8ef; }
+  section[data-testid="stSidebar"] .pl-side-h { font-size: 1.05rem; font-weight: 700; margin: 0; color: #1b2433; }
+  section[data-testid="stSidebar"] .pl-side-sub { color: #5b6475; font-size: 0.82rem; margin: 0.1rem 0 0.2rem; }
+  /* make the selected period / detail button obvious */
   section[data-testid="stSidebar"] button[data-testid="stBaseButton-segmented_controlActive"],
   section[data-testid="stSidebar"] button[kind="segmented_controlActive"] {
-      background: #6ea8f5 !important; border-color: #6ea8f5 !important; }
+      background: #1f5fae !important; border-color: #1f5fae !important; }
   section[data-testid="stSidebar"] button[data-testid="stBaseButton-segmented_controlActive"] p,
-  section[data-testid="stSidebar"] button[kind="segmented_controlActive"] p { color: #0f1729 !important;
+  section[data-testid="stSidebar"] button[kind="segmented_controlActive"] p { color: #ffffff !important;
       font-weight: 700; }
   div[data-testid="stExpander"] details summary p { font-weight: 600; }
-  /* tabs as pills */
-  div[data-baseweb="tab-list"] { gap: 0.45rem; flex-wrap: wrap; }
-  button[data-baseweb="tab"] { background: #ffffff; border: 1px solid #dfe3ea !important; border-radius: 999px;
-      padding: 0.35rem 1rem !important; height: auto; }
-  button[data-baseweb="tab"] p { font-size: 0.93rem; font-weight: 600; }
-  button[data-baseweb="tab"][aria-selected="true"] { background: #1d2432; border-color: #1d2432 !important; }
-  button[data-baseweb="tab"][aria-selected="true"] p { color: #ffffff; }
-  div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] { display: none; }
+  /* tabs: Streamlit's own underlined tabs, with clearer labels (ARIA roles work on every version) */
+  div[data-testid="stTabs"] [role="tablist"] { gap: 0.6rem; }
+  div[data-testid="stTabs"] [role="tab"] p { font-size: 0.97rem; font-weight: 600; }
   /* motion: gentle, once; none for people who ask for reduced motion */
-  @keyframes plUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes plUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   @keyframes plFade { from { opacity: 0; } to { opacity: 1; } }
   @keyframes plDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-  @keyframes plPulse { 0% { transform: scale(1); opacity: .6; } 70%, 100% { transform: scale(2.6); opacity: 0; } }
+  @keyframes plPulse { 0% { transform: scale(1); opacity: .5; } 70%, 100% { transform: scale(2.4); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) {
     .pl-card, .pl-findings, .pl-hline, .pl-harea, .pl-hpulse { animation: none !important; }
   }
@@ -193,13 +198,17 @@ ICONS = {   # 24 x 24 line icons
     "trend": "<path d='M3 17l6-6 4 4 8-8'/><path d='M15 7h6v6'/>",
     "range": "<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 3'/>",
 }
-CARD_COLOURS = {"tag": ("#2a78d6", "#eaf2fc"), "calendar": ("#eb6834", "#fdeee6"),
-                "trend": ("#1baf7a", "#e5f6ef"), "range": ("#6250d6", "#eeebfb")}
-LOGO = ("<svg viewBox='0 0 64 64'><circle cx='28' cy='28' r='22' fill='#253049' stroke='#6ea8f5' stroke-width='5'/>"
-        "<rect x='17' y='30' width='6' height='10' rx='2' fill='#6ea8f5'/>"
-        "<rect x='26' y='23' width='6' height='17' rx='2' fill='#6ea8f5'/>"
-        "<rect x='35' y='15' width='6' height='25' rx='2' fill='#e34948'/>"
-        "<line x1='45' y1='45' x2='59' y2='59' stroke='#ffffff' stroke-width='6' stroke-linecap='round'/></svg>")
+CARD_COLOURS = {"tag": ("#1f5fae", "#e8f0fa"), "calendar": ("#b4531c", "#fbeee6"),   # calm, official tones
+                "trend": ("#0f7a5c", "#e3f3ed"), "range": ("#4f46a5", "#ecebf8")}
+LOGO = ("<svg viewBox='0 0 64 64'><circle cx='28' cy='28' r='22' fill='#eef3fa' stroke='#13264a' stroke-width='5'/>"
+        "<rect x='17' y='30' width='6' height='10' rx='2' fill='#1f5fae'/>"
+        "<rect x='26' y='23' width='6' height='17' rx='2' fill='#1f5fae'/>"
+        "<rect x='35' y='15' width='6' height='25' rx='2' fill='#c0392b'/>"
+        "<line x1='45' y1='45' x2='59' y2='59' stroke='#13264a' stroke-width='6' stroke-linecap='round'/></svg>")
+NOTE_ICONS = {   # line icons instead of emoji, in the note's own colour
+    "info": "<svg class='pl-ni' viewBox='0 0 24 24'><circle cx='12' cy='12' r='9'/><path d='M12 11v6M12 7.6v.2'/></svg>",
+    "caution": "<svg class='pl-ni' viewBox='0 0 24 24'><path d='M12 3.5 22 20.5H2z'/><path d='M12 10v5M12 17.8v.2'/></svg>",
+}
 
 
 def _html(markup: str) -> None:
@@ -208,6 +217,11 @@ def _html(markup: str) -> None:
 
 def _esc(text) -> str:
     return html.escape(str(text))
+
+
+def _md_bold(text: str) -> str:
+    """Escape text for HTML and turn **bold** markers into <b> tags."""
+    return re.sub(r"[*][*](.+?)[*][*]", r"<b>\1</b>", _esc(text))
 
 
 def _show(fn, obj, **kw):
@@ -373,13 +387,21 @@ def sidebar_filters(data: PreparedData) -> tuple[A.Filters, bool]:
         codes = sb.multiselect("Categories", options, default=default, key=f"f_codes_{population}_{level}_{within}",
                                max_selections=MAX_CATEGORIES, format_func=lambda c: _label(c, names),
                                help=f"Up to {MAX_CATEGORIES}, so each keeps its own colour.")
+        if not codes:
+            sb.caption("Nothing picked yet, so the page shows the overall index (All items).")
     else:
         n = sb.slider("How many", 3, MAX_CATEGORIES, 5, key="f_n")
         probe = A.Filters(pd.Timestamp(start), pd.Timestamp(end), options, population, measure)
         codes = cd.auto_pick(cpi, data.weights, probe, options, mode, n)
         if sb.checkbox("Include the overall index (All items) for reference", value=True, key="f_head"):
             codes = [config.HEADLINE_CODE] + codes
-        sb.caption("Picked: " + ", ".join(_label(c, names) for c in codes) if codes else "Nothing to pick.")
+        picked = [c for c in codes if c != config.HEADLINE_CODE]
+        if picked:
+            sb.caption("Picked: " + ", ".join(_label(c, names) for c in codes))
+        else:
+            sb.caption(f"Nothing to rank at {pd.Timestamp(end):%B %Y}: "
+                       + E.why_empty(cpi, probe, [c for c in options if c != config.HEADLINE_CODE] or options,
+                                     "yoy" if measure == "index" else measure))
 
     # 4 - how to show change
     sb.markdown("<p class='pl-step'>4 · Show change as</p>", unsafe_allow_html=True)
@@ -393,6 +415,7 @@ def sidebar_filters(data: PreparedData) -> tuple[A.Filters, bool]:
             del st.session_state[k]
         st.rerun()
 
+    st.session_state["pl_nothing_picked"] = not codes
     f = A.Filters(pd.Timestamp(start), pd.Timestamp(end), codes or ["0"], population, measure)
     return f, by_nat
 
@@ -414,7 +437,7 @@ def header(data: PreparedData, f: A.Filters) -> None:
         "<div class='pl-hero'><div><p class='pl-kicker'>Bahrain cost-of-living monitor</p>"
         "<div class='pl-title'>PriceLens BH</div>"
         "<p class='pl-lead'>How prices are changing in Bahrain, by spending category and household group, "
-        "from the official Consumer Price Index.</p><div class='pl-chips'>"
+        "and which categories to watch, from the official Consumer Price Index.</p><div class='pl-chips'>"
         "<span class='pl-chip'>Official data: <b>iGA, Kingdom of Bahrain</b></span>"
         f"<span class='pl-chip'>Latest month: <b>{last:%B %Y}</b></span>"
         "<span class='pl-chip'>April 2019 = <b>100</b></span></div></div>"
@@ -435,12 +458,14 @@ def selection_bar(data: PreparedData, f: A.Filters) -> None:
 
 
 def _note(kind: str, text: str) -> None:
-    icon = {"info": "ℹ️", "caution": "⚠️"}[kind]
-    _html(f"<div class='pl-note {kind}'>{icon}&nbsp; {text}</div>")
+    _html(f"<div class='pl-note {kind}'>{NOTE_ICONS[kind]}<div>{text}</div></div>")
 
 
 def data_notes(data: PreparedData, f: A.Filters, by_nat: bool) -> None:
     """Short, calm notes about the data behind this view (details live in Data & sources)."""
+    if st.session_state.get("pl_nothing_picked"):
+        _note("info", "No categories picked yet, so the page shows the overall index (All items). "
+                      "Pick up to 8 in the sidebar, step 3.")
     q = data.quality
     row = q[q["check"] == config.D3_FINGERPRINT_CHECK]
     if len(row) and row.iloc[0]["status"] == "warning":
@@ -448,11 +473,14 @@ def data_notes(data: PreparedData, f: A.Filters, by_nat: bool) -> None:
                          "2010–2016 figures may differ from our report. See <b>Data &amp; sources</b>.")
     cpi = data.cpi
     have = cpi[(cpi["population"] == f.population) & cpi["index"].notna()]
-    if f.population != config.NATIONAL:
+    reason = E.selection_reason(cpi, f)
+    if reason:                       # nothing at the end of the period: say why once, here
+        _note("info", _esc(reason))
+    elif f.population != config.NATIONAL:
         first = have["period"].min()
         if f.start < first:
-            _note("info", f"{_esc(HOUSEHOLD_LABELS[f.population])}: figures start in {first:%B %Y}, so earlier "
-                          "months are empty.")
+            _note("info", f"{_esc(HOUSEHOLD_LABELS[f.population])}: figures start in {first:%B %Y}, so the "
+                          "charts start there.")
     else:
         divisions_from = have.loc[have["level"] > 0, "period"].min()
         if f.start < divisions_from:
@@ -522,12 +550,12 @@ def key_numbers(data: PreparedData, f: A.Filters) -> None:
     cards = [
         _card("Price level", s["index"], "index", E.sentence(s["index"], "index"), "Index · April 2019 = 100",
               icon="tag", spark=V.spark_line(recent("index", 36), "#2a78d6", ref=100.0),
-              spark_cap="last 3 years · dashed line = 100", delay=0.0),
+              spark_cap=f"3 years to {end:%b %Y} · dashed line = 100", delay=0.0),
         _card("Monthly change", s["mom"], "mom", E.sentence(s["mom"], "mom"), "Month-on-month", icon="calendar",
-              spark=V.spark_bars(recent("mom", 12)), spark_cap="each month of the last year", delay=0.08),
+              spark=V.spark_bars(recent("mom", 12)), spark_cap=f"12 months to {end:%b %Y}", delay=0.08),
         _card("Yearly change (inflation)", s["yoy"], "yoy", E.sentence(s["yoy"], "yoy"),
               "Year-on-year", icon="trend", spark=V.spark_line(recent("yoy", 24), "#1baf7a", ref=0.0),
-              spark_cap="last 2 years · dashed line = 0%", delay=0.16),
+              spark_cap=f"2 years to {end:%b %Y} · dashed line = 0%", delay=0.16),
         _card("Change over your period", None, "base",
               E.period_sentence(s["over_range_pct"], start, f.end),
               f"From {pd.Timestamp(start):%b %Y}" if start else "Period change",
@@ -547,7 +575,7 @@ def findings(data: PreparedData, f: A.Filters) -> None:
     badge = {"overall": "●", "up": "▲", "down": "▼", "driver": "◆"}
     rows = "".join(
         f"<div class='pl-find'><span class='b {kind}'>{badge[kind]}</span><span>"
-        + re.sub(r"[*][*](.+?)[*][*]", r"<b>\1</b>", _esc(text)) + "</span></div>"
+        + _md_bold(text) + "</span></div>"
         for kind, text in items)
     _html(f"<div class='pl-findings'><p class='h'>In plain words</p>{rows}</div>")
 
@@ -575,6 +603,7 @@ def summary_table(data: PreparedData, f: A.Filters) -> None:
           f"<span class='pl-when'>{pd.Timestamp(f.end):%B %Y}</span></div>")
     pct = "%.1f%%"
     _show(st.dataframe, show, hide_index=True, column_config={
+        "Category": st.column_config.TextColumn(width="large"),     # long group names are not cut off
         "Price level": st.column_config.NumberColumn(format="%.1f", help=E.MEASURES["index"]["help"]),
         "vs previous month (%)": st.column_config.NumberColumn(format=pct, help=E.MEASURES["mom"]["help"]),
         "vs a year earlier (%)": st.column_config.NumberColumn(format=pct, help=E.MEASURES["yoy"]["help"]),
@@ -586,13 +615,13 @@ def summary_table(data: PreparedData, f: A.Filters) -> None:
     left, right = st.columns([3, 1])
     if cov["missing"]:
         left.caption(f"{cov['missing']} months with no published value are left empty, never estimated.")
-    right.download_button("⬇ Download these figures (CSV)", show.to_csv(index=False).encode("utf-8"),
+    right.download_button("Download these figures (CSV)", show.to_csv(index=False).encode("utf-8-sig"),
                           file_name=f"pricelens_{pd.Timestamp(f.end):%Y-%m}.csv", mime="text/csv",
                           key="dl_summary")
 
 
 # --------------------------------------------------------------------------
-# F3 - charts (each says what it answers, how to read it, and why this chart)
+# F3 - charts (each says what it answers and how to read it)
 # --------------------------------------------------------------------------
 def _panel(key: str):
     """A white box around a chart or table (bordered container; styled through its key)."""
@@ -602,60 +631,83 @@ def _panel(key: str):
         return st.container(border=True)
 
 
-def chart_header(key: str, suffix: str = "") -> None:
-    c = E.CHARTS[key]
-    _html(f"<div class='pl-chart-h'><span class='t'>{_esc(c['title'])}</span>"
+def _nothing(data: PreparedData, f: A.Filters) -> None:
+    """Empty chart: a short line here; the reason and what to choose instead is the note at the top."""
+    if E.selection_reason(data.cpi, f):
+        st.caption("Nothing to show for this period and measure. The note at the top of the page explains why.")
+    else:
+        st.caption(f"No published values for this selection in {pd.Timestamp(f.end):%B %Y}.")
+
+
+def chart_header(key: str, suffix: str = "", measure: str | None = None) -> None:
+    title, short = E.chart_text(key, measure)
+    _html(f"<div class='pl-chart-h'><span class='t'>{_esc(title)}</span>"
           f"<span class='pl-when'>{_esc(suffix)}</span></div>"
-          f"<p class='pl-chart-read'>{_esc(c['short'])}</p>")
+          f"<p class='pl-chart-read'>{_esc(short)}</p>")
 
 
 def chart_trend(data: PreparedData, f: A.Filters) -> None:
-    chart_header("trend", f"{pd.Timestamp(f.start):%b %Y} – {pd.Timestamp(f.end):%b %Y}")
+    chart_header("trend", f"{pd.Timestamp(f.start):%b %Y} – {pd.Timestamp(f.end):%b %Y}", f.measure)
     df = cd.trend(data.cpi, f)
-    if df.empty:
-        st.info("No data for this selection.")
+    if df.empty or df["value"].isna().all():
+        _nothing(data, f)
         return
     names = dict(zip(data.labels["code"], data.labels["name"], strict=True))
     codes, _ = cd.usable_codes(data.cpi, f)
+    # The axis starts at the first month with a value (e.g. May 2019 for Bahraini households), not at
+    # empty years at the start of the period; the note above the charts says when figures begin.
+    first = max(pd.Timestamp(f.start), pd.Timestamp(df.dropna(subset=["value"])["period"].min()))
+    df = df[df["period"] >= first]
     label_of = {f"{c} {names.get(c, '')}": _label(c, names) for c in codes}
     df["category"] = df["category"].map(lambda x: label_of.get(x, x))
     n_months = df["period"].nunique()
+    # Labels only for months inside the data, so the axis never shows a month after August 2026
+    # (the right-hand margin below is just room for the end labels).
+    ticks = [alt.DateTime(year=p.year, month=p.month, date=1) for p in cd.month_ticks(first, f.end)]
     if n_months > 48:     # long range: one label per year, no dots
-        axis = alt.Axis(format="%Y", tickCount={"interval": "year", "step": 1}, labelAngle=0, grid=False)
+        axis = alt.Axis(format="%Y", values=ticks, labelAngle=0, grid=False)
     else:
-        axis = alt.Axis(format="%b %Y", tickCount={"interval": "month", "step": 3}, labelAngle=-40, grid=False)
+        axis = alt.Axis(format="%b %Y", values=ticks, labelAngle=-40, grid=False)
     y_title = MEASURE_LABELS[f.measure]
-    end = pd.Timestamp(f.end) + pd.DateOffset(months=max(2, n_months // 10))    # room for end labels
+    ref = 100 if f.measure == "index" else 0     # what the dashed line means is in the line above the chart
+    last = df.dropna(subset=["value"]).sort_values("period").groupby("category", as_index=False).tail(1)
+    end_labels = len(last) <= 4        # more lines than that: the legend below names them, no end labels
+    end = pd.Timestamp(f.end)
+    if end_labels:
+        end += pd.DateOffset(months=max(2, n_months // 10))                   # room for the end labels
     x = alt.X("period:T", title=None, axis=axis,
-              scale=alt.Scale(domain=[alt.DateTime(year=f.start.year, month=f.start.month, date=1),
+              scale=alt.Scale(domain=[alt.DateTime(year=first.year, month=first.month, date=1),
                                       alt.DateTime(year=end.year, month=end.month, date=1)]))
     point = alt.OverlayMarkDef(size=36, filled=True, stroke=SURFACE, strokeWidth=2) if n_months <= 48 else False
-    colour = alt.Color("category:N", title=None, scale=_series_scale(codes, names))
+    # Legend in two columns under the chart: one long row of names would squeeze the half-width chart.
+    colour = alt.Color("category:N", title=None, scale=_series_scale(codes, names),
+                       legend=alt.Legend(columns=2, labelLimit=240, symbolType="stroke"))
     line = alt.Chart(df).mark_line(strokeWidth=2, strokeCap="round", strokeJoin="round", point=point).encode(
         x=x, y=alt.Y("value:Q", title=y_title, scale=alt.Scale(zero=False)), color=colour,
         tooltip=[alt.Tooltip("category:N", title="Category"),
                  alt.Tooltip("period:T", format="%B %Y", title="Month"),
                  alt.Tooltip("value:Q", format=".1f", title=y_title)])
-    last = df.dropna(subset=["value"]).sort_values("period").groupby("category", as_index=False).tail(1)
-    last = last.assign(text=last["value"].map(lambda v: E.fmt_value(v, f.measure)))
-    labels = alt.Chart(last).mark_text(align="left", dx=7, fontSize=11, fontWeight=600).encode(
-        x=x, y="value:Q", text="text:N", color=alt.Color("category:N", scale=_series_scale(codes, names),
-                                                          legend=None))
-    ref = 100 if f.measure == "index" else 0
-    ref_text = "April 2019 = 100" if f.measure == "index" else "no change"
-    rule = alt.Chart(pd.DataFrame({"y": [ref], "t": [ref_text]}))
-    rule_line = rule.mark_rule(color=AXIS, strokeWidth=1, strokeDash=[4, 4]).encode(y="y:Q")
-    rule_text = rule.mark_text(align="left", baseline="bottom", dy=-3, color=MUTED, fontSize=10).encode(
-        y="y:Q", text="t:N", x=alt.value(4))
-    _chart(rule_line + rule_text + line + labels, height=320)
+    rule_line = alt.Chart(pd.DataFrame({"y": [ref]})).mark_rule(
+        color=AXIS, strokeWidth=1, strokeDash=[4, 4]).encode(y="y:Q")
+    layers = rule_line + line
+    if end_labels:
+        last = last.assign(text=last["value"].map(lambda v: E.fmt_value(v, f.measure)),
+                           label_y=cd.spread_labels(last["value"], df["value"].tolist() + [ref], 270))
+        layers += alt.Chart(last).mark_text(align="left", dx=7, fontSize=11, fontWeight=600).encode(
+            x=x, y=alt.Y("label_y:Q", title=y_title), text="text:N",
+            color=alt.Color("category:N", scale=_series_scale(codes, names), legend=None))
+    _chart(layers, height=320)
 
 
 def chart_comparison(data: PreparedData, f: A.Filters, by_nat: bool) -> None:
-    chart_header("comparison", f"{pd.Timestamp(f.end):%B %Y}")
+    chart_header("comparison", f"{pd.Timestamp(f.end):%B %Y}", f.measure)
     df = cd.comparison(data.cpi, f, by_nat).dropna(subset=["value"])
     if df.empty:
-        st.info("No comparable values for this selection.")
+        _nothing(data, f)
         return
+    if by_nat and df.groupby("code")["group"].nunique().min() < 3:
+        st.caption("Bahraini and non-Bahraini figures exist only for the overall index and the 12 main groups; "
+                   "other categories show all households only.")
     df["label"] = df["code"] + " " + df["name"].map(E.display_name)
     df["text"] = df["value"].map(lambda v: E.fmt_value(v, f.measure))
     df["group"] = df["group"].map(lambda g: HOUSEHOLD_LABELS.get(g, g))
@@ -697,9 +749,12 @@ def chart_composition(data: PreparedData, f: A.Filters) -> None:
         return
     try:
         comp = cd.basket(data.cpi, data.weights, f)
-    except A.DataUnavailable as exc:
-        st.info(str(exc))
-        return
+        has_contrib = comp["contribution_pts"].notna().any()
+    except A.DataUnavailable:
+        has_contrib = False
+    if not has_contrib:     # the weights are one fixed basket, so they can still be shown from the latest month
+        latest = pd.Timestamp(data.cpi["period"].max())
+        comp = cd.basket(data.cpi, data.weights, A.Filters(latest, latest, f.codes, f.population, f.measure))
     comp["label"] = comp["code"] + " " + comp["name"].map(E.display_name)
     note = ("One fixed national basket (iGA Table 2.01): it does not change with the period"
             + (" and is also used for Bahraini and non-Bahraini households." if f.population != config.NATIONAL
@@ -720,7 +775,14 @@ def chart_composition(data: PreparedData, f: A.Filters) -> None:
     
     with right:
         chart_header("contributions", f"{pd.Timestamp(f.end):%B %Y}")
-        st.caption(f"Overall yearly change: {comp.attrs['headline_yoy']:+.1f}%. The bars add up to "
+        if not has_contrib:
+            start = cd.contributions_from(data.cpi)
+            _note("info", f"This chart needs each spending group's yearly change, which starts in {start:%B %Y} "
+                          f"(the groups start in {start - pd.DateOffset(months=12):%B %Y}). Choose a period that "
+                          f"ends in {start:%B %Y} or later.")
+            return
+        st.caption(f"All households (iGA publishes spending weights only for the whole country). Overall yearly "
+                   f"change: {comp.attrs['headline_yoy']:+.1f}%; the bars add up to "
                    f"{comp.attrs['sum_of_contributions']:+.2f} points (our approximation).")
         c = comp.dropna(subset=["contribution_pts"])
         order = c.sort_values("contribution_pts", ascending=False)["label"].tolist()
@@ -740,11 +802,42 @@ def chart_composition(data: PreparedData, f: A.Filters) -> None:
         _chart(bars + pos + neg, height=430)
     
 
+def year_table(data: PreparedData, f: A.Filters) -> None:
+    """Annual averages for whole calendar years: how this year compares with earlier ones."""
+    t = cd.annual_table(data.cpi, f)
+    chart_header("years", HOUSEHOLD_LABELS[f.population])
+    if t.empty:
+        st.caption("No complete calendar year in this period: an annual average needs all 12 months. "
+                   "Choose a longer period.")
+        return
+    names = dict(zip(data.labels["code"], data.labels["name"], strict=True))
+    show = t.assign(Category=[_label(c, names) for c in t["code"]]).drop(columns=["code", "name"])
+    years = [str(y) for y in t.attrs["years"]]
+    change = t.attrs["change_col"]
+    show = show[["Category", *years, change]]
+    _show(st.dataframe, show, hide_index=True, column_config={
+        "Category": st.column_config.TextColumn(width="large"),
+        **{y: st.column_config.NumberColumn(format="%.1f", help=f"Average price level in {y} (April 2019 = 100)")
+           for y in years},
+        change: st.column_config.NumberColumn(format="%+.1f%%", help="Change in the annual average price level "
+                                                                     "from the year before"),
+    })
+    notes = []
+    in_period = range(pd.Timestamp(f.start).year, pd.Timestamp(f.end).year + 1)
+    if len(years) < len([y for y in in_period if y not in t.attrs["left_out"]]):
+        notes.append(f"Showing the latest {len(years)} complete years in your period.")
+    if t.attrs["left_out"]:
+        notes.append(f"Not shown: {', '.join(map(str, t.attrs['left_out']))}, because an annual average needs all "
+                     "12 months.")
+    if notes:
+        st.caption(" ".join(notes))
+
+
 def chart_heatmap(data: PreparedData, f: A.Filters) -> None:
-    chart_header("heatmap")
+    chart_header("heatmap", measure=f.measure)
     df = cd.heatmap(data.cpi, f)
     if df.empty:
-        st.info("No data for this selection.")
+        _nothing(data, f)
         return
     names = dict(zip(data.labels["code"], data.labels["name"], strict=True))
     df["category"] = df["category"].map(lambda x: _label(x.split(" ")[0], names))
@@ -761,7 +854,9 @@ def chart_heatmap(data: PreparedData, f: A.Filters) -> None:
         x=alt.X("yearmonth(period):O", title=None, axis=x_axis),
         y=alt.Y("category:N", title=None, axis=alt.Axis(labelLimit=300, ticks=False, domain=False)),
         color=alt.Color("value:Q", title=MEASURE_LABELS[f.measure],
-                        scale=alt.Scale(domain=[mid - span, mid, mid + span], range=[DOWN, NEUTRAL, UP]),
+                        # "lab" blends straight from grey to red or blue (the default turned the blue half purple)
+                        scale=alt.Scale(domain=[mid - span, mid, mid + span], range=[DOWN, NEUTRAL, UP],
+                                        interpolate="lab"),
                         legend=alt.Legend(orient="right", gradientLength=160)),
         tooltip=[alt.Tooltip("category:N", title="Category"), alt.Tooltip("period:T", format="%B %Y", title="Month"),
                  alt.Tooltip("value:Q", format=".1f", title=MEASURE_LABELS[f.measure])])
@@ -774,6 +869,13 @@ def priority_section(data: PreparedData, f: A.Filters) -> None:
           "Each main spending group is checked against four criteria. The table shows the evidence; "
           "analysts decide.</p>")
     t = A.priority_table(data.cpi, data.weights, f.end, codes=f.codes, population=f.population)
+    if t["yoy"].isna().all():
+        groups = data.labels.loc[data.labels["level"] == 1, "code"].tolist()
+        start = cd.first_value_month(data.cpi, f.population, groups, "yoy")
+        _note("info", f"The watch list compares the spending groups' yearly changes, which for "
+                      f"{_esc(E.POP_WORDS[f.population])} start in {start:%B %Y}. Choose a period that ends in "
+                      f"{start:%B %Y} or later.")
+        return
     r = t.attrs["rules"]
     show = pd.DataFrame({
         "Spending group": t["code"] + "  " + t["name"].map(E.display_name),
@@ -794,6 +896,10 @@ def priority_section(data: PreparedData, f: A.Filters) -> None:
         "Bahraini minus non-Bahraini (points)": st.column_config.NumberColumn(
             format="%.1f", help="Year-on-year change for Bahraini households minus non-Bahraini households."),
     })
+    if t["gap_bh_minus_nonbh"].isna().all():
+        gap_from = cd.first_value_month(data.cpi, "Bahraini", [config.HEADLINE_CODE], "yoy")
+        st.caption(f"Criterion 4 (different for households) can be checked from {gap_from:%B %Y}, the first "
+                   "yearly change for Bahraini and non-Bahraini households.")
     flags = cd.priority_flagged(data.discrepancies, f)
     if len(flags):
         _note("caution", f"The household-gap criterion uses 2022 values that differ from iGA's own table "
@@ -811,6 +917,9 @@ def priority_section(data: PreparedData, f: A.Filters) -> None:
 
 
 def sources_section(data: PreparedData) -> None:
+    items = "".join(f"<li>{_md_bold(t)}</li>" for t in E.LIMITS)
+    _html(f"<div class='pl-note info pl-block'><p class='pl-note-h'>{NOTE_ICONS['info']}Before you quote a figure</p>"
+          f"<ul class='pl-limits'>{items}</ul></div>")
     _html("<p class='pl-section'>Where the data comes from</p>"
           "<p class='pl-section-sub'>All figures come from the Information &amp; eGovernment Authority (iGA). "
           "Changes, rankings and contributions are our own calculations, not official iGA figures.</p>")
@@ -822,6 +931,10 @@ def sources_section(data: PreparedData) -> None:
             "Spending weights (Table 2.01), overall index 2011-2016 (Table 1), 2010 derived"], strict=True)]),
         hide_index=True,
         column_config={"Link": st.column_config.LinkColumn(), "Terms link": st.column_config.LinkColumn()})
+    _html("<p class='pl-section'>What the data covers</p>"
+          "<p class='pl-section-sub'>Counted from the prepared data each time the app starts. Missing values "
+          "are left as gaps: they are never filled in or estimated.</p>")
+    _show(st.dataframe, cd.coverage(data.cpi, data.weights), hide_index=True)
     if data.discrepancies is not None and len(data.discrepancies):
         d = data.discrepancies
         with st.expander(f"Known issue in the source: {len(d)} values in 2022 (Dataset 2)", expanded=False):
@@ -869,11 +982,13 @@ def render_dashboard(data: PreparedData | None = None, show_header: bool = True)
         summary_table(data, f)
 
     spending, monthly, watch, sources = st.tabs(
-        ["🧺 Spending & drivers", "🗓️ Month by month", "🎯 What to watch", "📚 Data & sources"])
+        ["Spending & drivers", "Months & years", "What to watch", "Data & sources"])
     with spending, _panel("spending"):
         chart_composition(data, f)
     with monthly, _panel("monthly"):
         chart_heatmap(data, f)
+        st.divider()
+        year_table(data, f)
     with watch, _panel("watch"):
         priority_section(data, f)
     with sources, _panel("sources"):
