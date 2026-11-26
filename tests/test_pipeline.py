@@ -279,6 +279,47 @@ def test_caution_for_household_comparison_chart(data):
     assert not cd.flagged_values(data.discrepancies, f, by_nationality=True).empty
 
 
+def test_plain_words_flag_only_figures_that_read_a_flagged_month(data):
+    # Jan 2022 non-Bahraini Transport is the planted discrepancy
+    whole = _f("2021-01-01", "2026-08-01", ["07"], "Non-Bahraini", "yoy")
+    assert not cd.flagged_values(data.discrepancies, whole).empty      # the period does use it ...
+    assert cd.end_month_flagged_codes(data.discrepancies, whole, "yoy") == set()   # ... Aug 2026 yoy does not
+    assert cd.end_month_flagged_codes(data.discrepancies, _f("2022-06-01", "2023-01-01", ["07"],
+                                                             "Non-Bahraini", "yoy"), "yoy") == {"07"}
+    assert cd.end_month_flagged_codes(data.discrepancies, _f("2022-06-01", "2023-01-01", ["07"],
+                                                             "Non-Bahraini", "mom"), "mom") == set()
+    assert cd.end_month_flagged_codes(data.discrepancies, _f("2021-06-01", "2022-01-01", ["07"],
+                                                             "National", "yoy"), "yoy") == set()
+
+
+def test_summary_table_flags_only_rows_that_read_a_flagged_month(data):
+    f = _f("2021-01-01", "2026-08-01", ["0", "07"], "Non-Bahraini", "yoy")
+    summary = cd.selection_summary(data.cpi, f)
+    assert cd.summary_flagged_codes(data.discrepancies, f, summary) == set()
+    f = _f("2022-01-01", "2026-08-01", ["0", "07"], "Non-Bahraini", "yoy")   # 'over your period' starts Jan 2022
+    summary = cd.selection_summary(data.cpi, f)
+    assert cd.summary_flagged_codes(data.discrepancies, f, summary) == {"07"}
+
+
+def test_year_table_marks_averages_and_change_built_on_flagged_values(data):
+    f = _f("2022-01-01", "2023-12-01", ["0", "07"], "Non-Bahraini", "index")
+    t = cd.annual_table(data.cpi, f)
+    notes = dict(zip(t["code"], cd.annual_table_notes(t, data.discrepancies, f.population), strict=True))
+    assert notes["0"] == ""
+    assert notes["07"].startswith("⚠") and "2022 average" in notes["07"] and "2023 vs 2022" in notes["07"]
+    # the change column alone: 2022 is the year before, not shown, but still feeds 2023 vs 2022
+    f = _f("2023-01-01", "2023-12-01", ["07"], "Non-Bahraini", "index")
+    t = cd.annual_table(data.cpi, f)
+    (note,) = cd.annual_table_notes(t, data.discrepancies, f.population)
+    assert "2022 average" not in note and "2023 vs 2022" in note
+    f = _f("2024-01-01", "2025-12-01", ["07"], "Non-Bahraini", "index")
+    t = cd.annual_table(data.cpi, f)
+    assert cd.annual_table_notes(t, data.discrepancies, f.population) == [""]
+    f = _f("2022-01-01", "2023-12-01", ["07"], "National", "index")
+    t = cd.annual_table(data.cpi, f)
+    assert cd.annual_table_notes(t, data.discrepancies, f.population) == [""]
+
+
 def test_priority_table_caution_uses_end_and_year_before(data):
     assert not cd.priority_flagged(data.discrepancies, _f("2022-06-01", "2023-01-01", ["0"], "National", "yoy")).empty
     assert cd.priority_flagged(data.discrepancies, _f("2023-06-01", "2023-08-01", ["0"], "National", "yoy")).empty
@@ -294,6 +335,8 @@ def tools(data):
 @pytest.mark.parametrize("args,code", [
     ({"category": "4.5"}, "04.5"), ({"category": "04.5"}, "04.5"), ({"category": "transport"}, "07"),
     ({"category": "Headline"}, "0"), ({"category": "07"}, "07"),
+    ({"category": "food"}, "01"), ({"category": "Food"}, "01"), ({"category": "01.1"}, "01.1"),
+    ({"category": "meat"}, "01.1.2"),
 ])
 def test_tools_resolve_categories(tools, args, code):
     r = tools.call("get_index", {**args, "month": "2026-08"})
