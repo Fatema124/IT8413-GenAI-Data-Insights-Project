@@ -568,8 +568,9 @@ def key_numbers(data: PreparedData, f: A.Filters) -> None:
 
 
 def findings(data: PreparedData, f: A.Filters) -> None:
-    flagged = cd.flagged_values(data.discrepancies, f)
-    items = E.key_findings_tagged(data.cpi, data.weights, f, set(flagged["code"]) if len(flagged) else set())
+    measure = "yoy" if f.measure == "index" else f.measure      # the measure the findings describe
+    items = E.key_findings_tagged(data.cpi, data.weights, f,
+                                  cd.end_month_flagged_codes(data.discrepancies, f, measure))
     if not items:
         return
     badge = {"overall": "●", "up": "▲", "down": "▼", "driver": "◆"}
@@ -584,8 +585,7 @@ def summary_table(data: PreparedData, f: A.Filters) -> None:
     summary = cd.selection_summary(data.cpi, f)
     if summary.empty:
         return
-    flagged = cd.flagged_values(data.discrepancies, f)
-    marked = set(flagged["code"]) if len(flagged) else set()
+    marked = cd.summary_flagged_codes(data.discrepancies, f, summary)
     show = pd.DataFrame({
         "Category": summary["code"] + "  " + summary["name"].map(E.display_name),
         "Price level": summary["index"],
@@ -815,6 +815,9 @@ def year_table(data: PreparedData, f: A.Filters) -> None:
     years = [str(y) for y in t.attrs["years"]]
     change = t.attrs["change_col"]
     show = show[["Category", *years, change]]
+    show["Note"] = cd.annual_table_notes(t, data.discrepancies, f.population)
+    if not show["Note"].any():
+        show = show.drop(columns=["Note"])
     _show(st.dataframe, show, hide_index=True, column_config={
         "Category": st.column_config.TextColumn(width="large"),
         **{y: st.column_config.NumberColumn(format="%.1f", help=f"Average price level in {y} (April 2019 = 100)")

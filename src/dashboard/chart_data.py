@@ -189,6 +189,52 @@ def priority_flagged(discrepancies: pd.DataFrame | None, f: A.Filters) -> pd.Dat
     return _combine(parts)
 
 
+def flagged_codes_at(discrepancies: pd.DataFrame | None, population: str, months) -> set[str]:
+    """Codes whose stored value for this household differs from iGA's Table 3 in any of these months."""
+    if discrepancies is None or discrepancies.empty or population not in NATIONALITY_POPULATIONS:
+        return set()
+    wanted = {_m(p) for p in months if p is not None and p != ""}
+    d = discrepancies
+    return set(d.loc[(d["population"] == population) & d["period"].isin(wanted), "code"])
+
+
+def end_month_flagged_codes(discrepancies: pd.DataFrame | None, f: A.Filters, measure: str) -> set[str]:
+    """Codes whose figure at the end month (for this measure) reads a flagged value.
+
+    A year-on-year figure for August 2026 reads August 2026 and August 2025 only, so
+    flagged 2022 values elsewhere in the period do not make it doubtful.
+    """
+    end = _m(f.end)
+    return flagged_codes_at(discrepancies, f.population, {end - pd.DateOffset(months=k) for k in LOOKBACK[measure]})
+
+
+def summary_flagged_codes(discrepancies: pd.DataFrame | None, f: A.Filters, summary: pd.DataFrame) -> set[str]:
+    """Rows of the summary table with a figure that reads a flagged value.
+
+    The table shows the index, month-on-month and year-on-year at the end month, and
+    the change from each row's first month with data (range_start) to the end month.
+    """
+    end = _m(f.end)
+    common = {end - pd.DateOffset(months=k) for k in (0, 1, 12)}
+    out = set()
+    for code, start in zip(summary["code"], summary["range_start"], strict=True):
+        months = common | ({_m(start)} if start else set())
+        if code in flagged_codes_at(discrepancies, f.population, months):
+            out.add(code)
+    return out
+
+
+def annual_flagged_years(discrepancies: pd.DataFrame | None, population: str) -> dict[str, set[int]]:
+    """For each code, the calendar years whose annual average uses a flagged value (any of its 12 months)."""
+    if discrepancies is None or discrepancies.empty or population not in NATIONALITY_POPULATIONS:
+        return {}
+    d = discrepancies[discrepancies["population"] == population]
+    out: dict[str, set[int]] = {}
+    for code, period in zip(d["code"], d["period"], strict=True):
+        out.setdefault(code, set()).add(pd.Timestamp(period).year)
+    return out
+
+
 def _combine(parts: list[pd.DataFrame]) -> pd.DataFrame:
     """One row per flagged value, listing every display that uses it."""
     out = pd.concat(parts, ignore_index=True)
@@ -199,6 +245,28 @@ def _combine(parts: list[pd.DataFrame]) -> pd.DataFrame:
 
 
 LAG_MONTHS = {"index": 0, "base": 0, "mom": 1, "yoy": 12}
+
+
+def annual_table_notes(t: pd.DataFrame, discrepancies: pd.DataFrame | None, population: str) -> list[str]:
+    """One note per row of annual_table: which shown averages (and the change) use flagged values."""
+    if t.empty:
+        return []
+    flagged = annual_flagged_years(discrepancies, population)
+    years = [int(y) for y in t.attrs["years"]]
+    last = years[-1]
+    notes = []
+    for code in t["code"]:
+        hit = flagged.get(code, set())
+        shown = [y for y in years if y in hit]
+        change_hit = last in hit or (last - 1) in hit
+        if not shown and not change_hit:
+            notes.append("")
+            continue
+        parts = [f"{y} average" for y in shown]
+        if change_hit:
+            parts.append(f"{last} vs {last - 1}")
+        notes.append(f"⚠ uses values that differ from iGA's table: {', '.join(parts)}")
+    return notes
 
 
 def annual_table(cpi: pd.DataFrame, f: A.Filters, max_years: int = 6) -> pd.DataFrame:

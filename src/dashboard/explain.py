@@ -274,7 +274,8 @@ def key_findings_tagged(cpi: pd.DataFrame, weights: pd.DataFrame | None, f: A.Fi
                         flagged_codes: set[str] | None = None) -> list[tuple[str, str]]:
     """Findings with a kind ('overall', 'up', 'down', 'driver') so the page can give each an icon.
 
-    Categories whose figures use a flagged source value get a ⚠ after their number.
+    flagged_codes: categories whose figure at the end month reads a flagged source value
+    (chart_data.end_month_flagged_codes); only those get a ⚠ after their number.
     """
     warn = (lambda code: " ⚠" if code in (flagged_codes or set()) else "")
     m = "yoy" if f.measure == "index" else f.measure
