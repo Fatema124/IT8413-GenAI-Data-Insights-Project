@@ -384,6 +384,28 @@ def test_series_colours_never_cycle():
     assert len(ast.literal_eval(values["SERIES"])) >= ast.literal_eval(values["MAX_CATEGORIES"])
 
 
+def test_series_colours_are_clearly_different():
+    """No two line colours may look alike (CIE76 colour difference of at least 30)."""
+    import ast
+    import itertools
+    import math
+    src = (config.REPO_ROOT / "src" / "dashboard" / "page.py").read_text(encoding="utf-8")
+    series = next(ast.literal_eval(n.value) for n in ast.parse(src).body if isinstance(n, ast.Assign)
+                  and any(isinstance(t, ast.Name) and t.id == "SERIES" for t in n.targets))
+
+    def lab(hex_colour):
+        rgb = [int(hex_colour[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        r, g, b = [((c + 0.055) / 1.055) ** 2.4 if c > 0.04045 else c / 12.92 for c in rgb]
+        x = (r * .4124 + g * .3576 + b * .1805) / .95047
+        y = r * .2126 + g * .7152 + b * .0722
+        z = (r * .0193 + g * .1192 + b * .9505) / 1.08883
+        f = [v ** (1 / 3) if v > 0.008856 else 7.787 * v + 16 / 116 for v in (x, y, z)]
+        return 116 * f[1] - 16, 500 * (f[0] - f[1]), 200 * (f[1] - f[2])
+
+    for a, b in itertools.combinations(series, 2):
+        assert math.dist(lab(a), lab(b)) >= 30, (a, b)
+
+
 # ---------------------------------------------------------------- empty selections (bug found in fresh test)
 def test_comparison_with_nothing_available_is_empty_not_error(data):
     f = A.Filters(pd.Timestamp("2023-09-01"), pd.Timestamp("2026-08-01"), ["01.1"], "Non-Bahraini", "yoy")
