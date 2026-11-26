@@ -249,10 +249,21 @@ class Toolbox:
         exact = names[names["_n"] == key].sort_values("level")
         contains = names[names["_n"].str.contains(re.escape(key), regex=True)].sort_values(["level", "code"])
         others = [{"code": r.code, "name": r.name} for r in contains.itertuples()][:8]
+        divisions = contains[contains["level"] == 1]
+        if len(exact) and exact.iloc[0]["level"] == 1:
+            code = exact.iloc[0]["code"]
+            return code, "name", [o for o in others if o["code"] != code]
+        # A plain word such as "food" or "clothing" means the main division
+        # ("Food and Non-Alcoholic Beverages"), not the smaller group that happens
+        # to share its first word ("01.1 Food"). Prefer the one division whose
+        # name starts with the word; the group stays reachable by its code.
+        leading = divisions[divisions["_n"].str.match(re.escape(key) + r"\b")]
+        if len(exact) and len(leading) == 1:
+            code = leading.iloc[0]["code"]
+            return code, "division name", [o for o in others if o["code"] != code]
         if len(exact):
             code = exact.iloc[0]["code"]
             return code, "name", [o for o in others if o["code"] != code]
-        divisions = contains[contains["level"] == 1]
         if len(divisions) == 1:
             code = divisions.iloc[0]["code"]
             return code, "name contains", [o for o in others if o["code"] != code]
