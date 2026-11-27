@@ -80,13 +80,18 @@ def _base(pid: str) -> str:
     return pid.rsplit("-p", 1)[0] if pid[:2] in ("D4", "D5", "D6", "D7", "D8") else pid
 
 
+def _covers(expected: str, pid: str) -> bool:
+    """An expected id matches the passage itself, its article, or (D9-P7) every window of that page."""
+    return expected in (pid, _base(pid)) or (expected[:2] in ("D9", "D1") and pid.startswith(expected + "-"))
+
+
 def trace(item: Item, record: dict) -> dict:
     """Where the answer went in the pipeline, from the answer record only."""
     calls = record.get("tool_calls", [])
     retrieved: list[str] = []
     for search in record.get("retrieval", []):
         retrieved += [h["id"] for h in search.get("hits", [])]
-    found = sorted(item.expected_passages & {_base(p) for p in retrieved})
+    found = sorted(e for e in item.expected_passages if any(_covers(e, p) for p in retrieved))
     return {
         "status": record.get("status", ""),
         "tools": "; ".join(f"{c['name']}:{c.get('result', {}).get('status', '')}" for c in calls),

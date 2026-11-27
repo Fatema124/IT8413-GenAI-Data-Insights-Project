@@ -1,6 +1,7 @@
 """Failure analysis (brief 7.4) for one scored run.
 
     python -m scripts.failure_analysis v1-dev
+    python -m scripts.failure_analysis v1 --testset results/test_set.csv     # final evaluation, all questions
 
 Reads results/<run>.jsonl (the answers) and results/<run>_scores.csv (the
 judged metrics), finds the failures, traces each one and suggests a category.
@@ -14,15 +15,18 @@ from __future__ import annotations
 import csv
 import json
 import sys
+from pathlib import Path
 
 from src.evaluation import failures as F
 from src.evaluation.dev_documents import BY_ID
+from src.evaluation.testset import load_items
 from src.pipeline import config
 
 RESULTS = config.REPO_ROOT / "results"
 
 
-def load(run: str) -> list[tuple[F.Item, dict, F.Scores]]:
+def load(run: str, items: dict | None = None) -> list[tuple[F.Item, dict, F.Scores]]:
+    items = items or BY_ID
     records = {}
     with open(RESULTS / f"{run}.jsonl", encoding="utf-8") as fh:
         for line in fh:
@@ -35,13 +39,21 @@ def load(run: str) -> list[tuple[F.Item, dict, F.Scores]]:
                          row["refusal"].strip().lower(), row["completeness"].strip().lower(),
                          row["ambiguous"].strip().lower() in ("y", "yes", "true", "1"), row["notes"],
                          row.get("category", "").strip())
-            out.append((BY_ID[row["question"]], records[row["question"]], s))
+            out.append((items[row["question"]], records[row["question"]], s))
     return out
 
 
 def main(argv: list[str]) -> int:
+    items = None
+    if "--testset" in argv:
+        i = argv.index("--testset")
+        items, argv = load_items(Path(argv[i + 1])), argv[:i] + argv[i + 2:]
     run = argv[0] if argv else "v1-dev"
-    fails = F.analyse(run, load(run))
+    fails = F.analyse(run, load(run, items))
+    for split in ("development", "held-out"):
+        n = sum(f.split == split for f in fails)
+        if n:
+            print(f"{split}: {n} failure(s)")
     path = RESULTS / f"{run}_failures.csv"
     F.write_csv(fails, path)
     print(f"{len(fails)} failure(s) in {run}:")

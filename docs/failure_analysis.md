@@ -116,6 +116,19 @@ consent must be in writing, which the sources do not say.
 
 ## Final evaluation
 
+**What Member 3 provides for the four runs (Eman's evaluation script):**
+- **Baseline document text:** `from src.documents.baseline import baseline_text`; `baseline_text()` returns Docs
+  4-10 exactly as the tool uses them, each page headed with the tool's citation, to place in the baseline prompt
+  with the datasets a question needs. `python -m src.documents.baseline --count` gives the exact token count.
+  The text is built on each computer and never committed.
+- **v1 and v2 settings:** `src.documents.settings.use_version("v1" | "v2")`; v2 differs in `SEARCH_QUESTION_TOO` only.
+- **Failure analysis on the full test set:** export the test-set spreadsheet as CSV with the columns
+  `question, split, type, question text, ground truth, source location`, save each run's answers as
+  `results/<run>.jsonl` and its scores as `results/<run>_scores.csv` (format of `scripts/run_dev_documents.py`), then
+  `python -m scripts.failure_analysis v1 --testset results/test_set.csv`. The expected passages are read from
+  the source locations (`src/evaluation/testset.py`), and failures are counted separately for development and
+  held-out questions.
+
 v2 was designed on the development set only. In the final evaluation all four configurations (control,
 baseline, v1, v2) run on the full test set, with development and held-out results reported separately (brief
 7.1, 7.2). The failure analysis above is then repeated on the v1 and v2 results of the full test set.
