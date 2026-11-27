@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import re
 
+from . import settings
 from .retrieve import Hit, Retriever
 
 OK, NOT_AVAILABLE, BAD_INPUT, ERROR = "ok", "not_available", "bad_input", "error"
@@ -77,7 +78,9 @@ class DocumentTools:
         # evidence in the number check, and a similarity score is not a fact from the sources.
         self.last_search: list[dict] = []
 
-    def call(self, name: str, args: dict | None = None) -> dict:
+    def call(self, name: str, args: dict | None = None, question: str | None = None) -> dict:
+        """`question` is the user's question, passed by the engine; used only when
+        settings.SEARCH_QUESTION_TOO is on (v2)."""
         args = dict(args or {})
         if name != SEARCH:
             return {"status": BAD_INPUT, "tool": name, "message": f"Unknown tool '{name}'.", "arguments": args}
@@ -86,7 +89,10 @@ class DocumentTools:
             return {"status": BAD_INPUT, "tool": name, "arguments": args,
                     "message": "Give one argument, 'query': what to look for, in English."}
         try:
-            hits = self.retriever.search(query)
+            if settings.SEARCH_QUESTION_TOO and question and question.strip() != query:
+                hits = self.retriever.search_both(query, question.strip())
+            else:
+                hits = self.retriever.search(query)
             self.last_search = [h.to_record() for h in hits]
         except Exception as exc:                    # a bug or a missing index: report it, never an answer
             return {"status": ERROR, "tool": name, "arguments": args, "message": f"{exc.__class__.__name__}: {exc}"}

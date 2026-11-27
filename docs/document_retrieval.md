@@ -107,3 +107,9 @@ Run with the integration patch applied locally (not committed). Development ques
 | Spare parts period and release (dev Q6) | Correct: 15 working days (ER Art. 16, number written in Arabic words), release on written notice plus consent (Law 35 Art. 9, ER Art. 16). Every sentence cited; 2 passages shown. | q1_answer.png, q1_passages.png |
 | Combined: CPI Sep 2023 food + defective product | Correct: food +7.9% (CPI Sep 2023 p. 3); replacement/refund (Law 35 Art. 8, ER Art. 10). Both parts cited; 9 passages. Gap: Law 28/2026 added a new item 1 to Art. 8(a), so the right is now item 2; the answer did not mention the amendment. Logged for failure analysis (7.4). | q2_*.png |
 | Milk price in Manama (dev Q19, must decline) | Declined with the fixed sentence "This is not available in the sources." 0 tool calls. | q3_refusal.png |
+
+## v2 setting (intervention, docs/failure_analysis.md)
+
+`SEARCH_QUESTION_TOO` (False in v1, True in v2): each document search also searches with the user's own
+question and adds its top passages that the model's query did not find (marked `question` in the log).
+`settings.use_version("v1" | "v2")` switches between the two; `as_dict()` records the value with every answer.

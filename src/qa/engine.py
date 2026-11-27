@@ -312,7 +312,7 @@ class DataQA:
 
     def _call_tool(self, name: str, args: dict, known: set[float], ans: Answer | None = None) -> dict:
         if self.documents is not None and name == "search_documents":
-            result = self.documents.call(name, args)
+            result = self.documents.call(name, args, question=ans.question if ans is not None else None)
             if ans is not None:
                 ans.retrieval.append({"query": args.get("query"), "hits": self.documents.last_search})
             return result

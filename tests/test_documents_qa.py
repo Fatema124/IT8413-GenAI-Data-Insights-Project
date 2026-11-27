@@ -72,3 +72,15 @@ def test_nothing_found_leads_to_a_declined_answer(data, docs):
     ans = DataQA(data, client, documents=docs).ask("What penalties does the e-commerce law set?")
     assert function_responses(client.models.requests[1])[0].response["status"] == "not_available"
     assert ans.status == DECLINED
+
+
+def test_engine_passes_the_users_question_to_the_search(data, docs):
+    from src.documents import settings as s
+    s.use_version("v2")
+    try:
+        client = FakeClient(turn(call("search_documents", query="closure")), turn(text("Done.")))
+        ans = DataQA(data, client, documents=docs).ask("How long for spare parts?")
+    finally:
+        s.use_version("v1")
+    reasons = {h["id"]: h["reason"] for h in ans.retrieval[0]["hits"]}
+    assert reasons.get("D6-A16") == "question" and ans.settings["retrieval_version"] == "v2"

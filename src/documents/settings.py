@@ -19,7 +19,25 @@ MIN_SCORE = 0.40          # below this cosine similarity a passage is not passed
                           # on the prompt rules, not on this cut-off (docs/document_retrieval.md).
 FOLLOW_AMENDMENTS = True  # with a 2012 article that Law 28/2026 changed, also give the 2026 text
 
+# The intervention (v2, brief 7.5) changes this one setting. The failure analysis of the
+# development run (27/11/2026) traced the "wrong passage" failures to the model's short
+# keyword query: the user's own question ranked the missing article higher (Q6: Executive
+# Regulation Art. 16 rank 9 -> rank 2). v2 also searches with the user's question and adds
+# its top passages to those of the model's query (docs/failure_analysis.md).
+SEARCH_QUESTION_TOO = False
+
+VERSIONS = {"v1": {"SEARCH_QUESTION_TOO": False}, "v2": {"SEARCH_QUESTION_TOO": True}}
+
+
+def use_version(version: str) -> None:
+    """Switch to the settings of v1 or v2 (evaluation runs; v2 differs from v1 in one setting)."""
+    global VERSION
+    for name, value in VERSIONS[version].items():
+        globals()[name] = value
+    VERSION = version
+
 
 def as_dict() -> dict:
     return {"retrieval_version": VERSION, "embedding_model": EMBEDDING_MODEL, "top_k": TOP_K,
-            "min_score": MIN_SCORE, "follow_amendments": FOLLOW_AMENDMENTS}
+            "min_score": MIN_SCORE, "follow_amendments": FOLLOW_AMENDMENTS,
+            "search_question_too": SEARCH_QUESTION_TOO}

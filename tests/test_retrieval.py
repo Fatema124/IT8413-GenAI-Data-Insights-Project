@@ -113,3 +113,33 @@ def test_scores_are_logged_but_not_given_as_evidence(tools):
     out = tools.call(SEARCH, {"query": "refund for a defect"})
     assert "score" not in out["passages"][0]
     assert tools.last_search[0]["id"] == "D4-A7" and "score" in tools.last_search[0]
+
+
+# ---------------------------------------------------------------- v2 (intervention): search the question too
+@pytest.fixture
+def v2():
+    from src.documents import settings as s
+    s.use_version("v2")
+    yield s
+    s.use_version("v1")
+
+
+def test_v1_searches_with_the_models_query_only(tools):
+    res = tools.call(SEARCH, {"query": "spare parts"}, question="Can I get a refund for a defect?")
+    assert [p["id"] for p in res["passages"]] == ["D4-A9"]
+
+
+def test_v2_adds_the_passages_found_by_the_question(tools, v2):
+    res = tools.call(SEARCH, {"query": "spare parts"}, question="Can I get a refund for a defect?")
+    assert [p["id"] for p in res["passages"]] == ["D4-A9", "D4-A7"]
+    assert [h["reason"] for h in tools.last_search] == ["retrieved", "question"]
+    assert v2.as_dict()["retrieval_version"] == "v2" and v2.as_dict()["search_question_too"] is True
+
+
+def test_v2_differs_from_v1_in_one_setting_only():
+    from src.documents import settings as s
+    s.use_version("v1"); one = s.as_dict()
+    s.use_version("v2"); two = s.as_dict()
+    s.use_version("v1")
+    changed = {k for k in one if one[k] != two[k]} - {"retrieval_version"}
+    assert changed == {"search_question_too"}

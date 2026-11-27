@@ -61,7 +61,7 @@ class Hit:
     passage: Passage
     score: float
     rank: int                 # 1 = best; 0 for a passage added through an amendment link
-    reason: str = "retrieved"  # retrieved | amendment
+    reason: str = "retrieved"  # retrieved | amendment | question (v2: found by the user's question)
 
     def to_record(self) -> dict:
         p = self.passage
@@ -89,6 +89,17 @@ class Retriever:
         r = cls(passages, embedder)
         np.savez(INDEX_FILE, key=key, vectors=r.vectors)
         return r
+
+    def search_both(self, query: str, question: str) -> list[Hit]:
+        """v2: the passages for the model's query, then those for the user's question that are not
+        already there (each search with the same top_k and min_score; reason "question")."""
+        hits = self.search(query)
+        have = {h.passage.id for h in hits}
+        for h in self.search(question):
+            if h.passage.id not in have:
+                hits.append(Hit(h.passage, h.score, h.rank, "question" if h.reason == "retrieved" else h.reason))
+                have.add(h.passage.id)
+        return hits
 
     def search(self, question: str, top_k: int = settings.TOP_K, min_score: float = settings.MIN_SCORE,
                follow_amendments: bool = settings.FOLLOW_AMENDMENTS) -> list[Hit]:
