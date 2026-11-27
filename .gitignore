@@ -21,3 +21,5 @@ data/raw/*.xlsx
 
 # Rebuilt by: python -m src.pipeline.run
 data/processed/
+#keep run logs with MOIC text out of the repo
+results/*.jsonl
