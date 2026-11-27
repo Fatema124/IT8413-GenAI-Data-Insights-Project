@@ -1,3 +1,9 @@
+# Member 3: MOIC/iGA documents and the text taken from them may not be redistributed (publisher terms)
+data/documents/
+
+# Second environment for document search (Python 3.12)
+.venv312/
+
 # Python
 .venv/
 __pycache__/
