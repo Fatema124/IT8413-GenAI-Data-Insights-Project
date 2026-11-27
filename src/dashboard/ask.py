@@ -25,6 +25,7 @@ import os
 import streamlit as st
 
 from src.qa import settings
+from src.documents.display import load_document_tools, show_sources
 from src.qa.engine import DECLINED, ERROR, Answer, DataQA, make_client
 
 TURNS_KEY = "qa_turns"
@@ -103,6 +104,7 @@ def _show_answer(ans: Answer) -> None:
         if ans.unsupported_numbers:
             st.warning("Check this answer: these numbers were not produced by the app's calculations: "
                        + ", ".join(ans.unsupported_numbers) + ". Do not quote them without checking.")
+    show_sources(ans)                             # F5: citations and the passages behind them
     if ans.tool_calls:
         with st.expander(f"How this answer was worked out ({len(ans.tool_calls)} step"
                          f"{'s' if len(ans.tool_calls) != 1 else ''})"):
@@ -144,6 +146,6 @@ def render_ask(data) -> None:
         st.rerun()
     if asked and question.strip():
         with st.spinner("Working out the answer..."):
-            ans = DataQA(data, make_client(key)).ask(question, history=turns)
+            ans = DataQA(data, make_client(key), documents=load_document_tools()).ask(question, history=turns)
         turns.append(ans)
         st.rerun()

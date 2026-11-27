@@ -115,7 +115,7 @@ def _decimals(x: float) -> int:
 TOOL_LIST = TOOL_DECLARATIONS + [CALCULATE_DECLARATION]
 
 
-def gemini_declarations() -> list:
+def gemini_declarations(extra: list | tuple = ()) -> list:
     """TOOL_LIST in the Gemini SDK's form.
 
     A tool without arguments (data_coverage) is declared with no parameters at all, because
@@ -124,7 +124,7 @@ def gemini_declarations() -> list:
     """
     from google.genai import types
     out = []
-    for d in TOOL_LIST:
+    for d in [*TOOL_LIST, *extra]:
         params = dict(d["parameters"])
         if not params.get("required"):
             params.pop("required", None)
@@ -159,6 +159,7 @@ class Answer:
     model_calls: int = 0
     retries: int = 0                              # busy-model retries (their wait is in latency_s)
     error: str | None = None
+    retrieval: list[dict] = field(default_factory=list)   # ranks and scores of each document search (F5, F10)
     settings: dict = field(default_factory=settings.as_dict)
     asked_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat(timespec="seconds"))
 
@@ -193,8 +194,9 @@ def make_client(api_key: str):
 class DataQA:
     """Answers questions over the prepared data with Gemini and the Toolbox."""
 
-    def __init__(self, data, client, model: str = settings.MODEL, sleep=time.sleep):
+    def __init__(self, data, client, model: str = settings.MODEL, sleep=time.sleep, documents=None):
         self.toolbox = Toolbox(data)
+        self.documents = documents                # src.documents.tool.DocumentTools, or None (data only)
         self.client = client
         self.model = model
         self._sleep = sleep                       # replaced in tests so retries do not wait
@@ -203,7 +205,11 @@ class DataQA:
     def ask(self, question: str, history: list[Answer] | None = None) -> Answer:
         started = time.perf_counter()
         question = (question or "").strip()
-        ans = Answer(question=question, answer="", status=ERROR, settings={**settings.as_dict(), "model": self.model})
+        run_settings = {**settings.as_dict(), "model": self.model}
+        if self.documents is not None:
+            from src.documents import prompt as doc_prompt, settings as doc_settings
+            run_settings.update(doc_settings.as_dict(), prompt=f"{settings.PROMPT_VERSION}+{doc_prompt.PROMPT_VERSION}")
+        ans = Answer(question=question, answer="", status=ERROR, settings=run_settings)
         if not question:
             ans.error = ans.answer = "Please type a question."
             return ans
@@ -220,11 +226,16 @@ class DataQA:
     # ------------------------------------------------------------------ internals
     def _config(self):
         from google.genai import types
+        prompt, extra = SYSTEM_PROMPT, ()
+        if self.documents is not None:
+            from src.documents.prompt import DOCUMENT_RULES
+            from src.documents.tool import DECLARATION
+            prompt, extra = SYSTEM_PROMPT + DOCUMENT_RULES, (DECLARATION,)
         return types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
+            system_instruction=prompt,
             temperature=settings.TEMPERATURE,
             max_output_tokens=settings.MAX_OUTPUT_TOKENS,
-            tools=[types.Tool(function_declarations=gemini_declarations())],
+            tools=[types.Tool(function_declarations=gemini_declarations(extra))],
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
 
@@ -280,7 +291,7 @@ class DataQA:
             replies = []
             for call in calls:
                 args = _plain(dict(call.args or {}))
-                result = self._call_tool(call.name, args, known)
+                result = self._call_tool(call.name, args, known, ans)
                 ans.tool_calls.append(ToolCall(name=call.name, arguments=args, result=result))
                 if result.get("status") in EVIDENCE:
                     known |= N.numbers_in_result(result)
@@ -299,7 +310,12 @@ class DataQA:
                 ans.retries += 1
                 self._sleep(settings.RETRY_WAITS_S[attempt])
 
-    def _call_tool(self, name: str, args: dict, known: set[float]) -> dict:
+    def _call_tool(self, name: str, args: dict, known: set[float], ans: Answer | None = None) -> dict:
+        if self.documents is not None and name == "search_documents":
+            result = self.documents.call(name, args)
+            if ans is not None:
+                ans.retrieval.append({"query": args.get("query"), "hits": self.documents.last_search})
+            return result
         if name == CALCULATE:
             try:
                 return to_json(calculate(known=known, **args))
