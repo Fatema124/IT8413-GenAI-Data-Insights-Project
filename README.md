@@ -11,9 +11,9 @@
 
 [![Open the live app](https://img.shields.io/badge/Open%20the%20live%20app-pricelens--bh.streamlit.app-13264a?style=for-the-badge&logo=streamlit&logoColor=white)](https://pricelens-bh.streamlit.app)
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-1f5fae?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/Python-3.12-1f5fae?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-dashboard-1f5fae?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io)
-[![Tests](https://img.shields.io/badge/tests-165%20passing-0f7a5c?style=flat-square)](tests/test_pipeline.py)
+[![Tests](https://img.shields.io/badge/tests-221%20passing-0f7a5c?style=flat-square)](tests/test_pipeline.py)
 [![Development checks](https://img.shields.io/badge/development%20checks-31%2F31-0f7a5c?style=flat-square)](scripts/check_dev_answers.py)
 [![Data](https://img.shields.io/badge/data-iGA%2C%20Kingdom%20of%20Bahrain-c9a227?style=flat-square)](https://www.data.gov.bh)
 
@@ -32,7 +32,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/stats-dark.svg">
-  <img src="docs/images/stats.svg" alt="At a glance: 10,376 monthly records prepared; 3 official iGA datasets; 68 spending categories plus the overall index; prices from 2010 to 2026; 100% match with iGA's own table (5,574 values); 165 automated tests passing" width="100%">
+  <img src="docs/images/stats.svg" alt="At a glance: 10,376 monthly records prepared; 3 official iGA datasets; 68 spending categories plus the overall index; prices from 2010 to 2026; 100% match with iGA's own table (5,574 values); 221 automated tests" width="100%">
 </picture>
 
 <br><br>
@@ -50,7 +50,7 @@
 ## ✨ What it does
 
 PriceLens BH turns Bahrain's official consumer price index into answers analysts can quote with confidence.
-The data pipeline and analytics dashboard (F1 – F3) are complete and live, and questions over the data (F4) are answered by Gemini, with every number computed by the app.
+The data pipeline and analytics dashboard (F1 – F3) are complete and live. Questions over the data and the documents (F4 – F8) are answered by Gemini, with every number computed by the app and every document statement cited to its article or page.
 
 <table>
   <tr>
@@ -93,10 +93,11 @@ The data pipeline and analytics dashboard (F1 – F3) are complete and live, and
 | Part | Features | Status |
 |---|---|---|
 | Data pipeline and analytics dashboard | F1 · F2 · F3 | ✅ Done |
-| Question answering over data | F4 · F6 · F8 | ✅ F4 done ([`src/qa/`](src/qa/)); 🔧 F6 and F8 next |
-| Document retrieval, citations and refusal | F5 · F7 | ⏳ Coming next |
+| Question answering over data, combined questions and follow-ups | F4 · F6 · F8 | ✅ Done ([`src/qa/`](src/qa/)) |
+| Document retrieval, citations and refusal | F5 · F7 | ✅ Done ([`src/documents/`](src/documents/)) |
 | Query log, configuration display and report export | F9 · F10 | ⏳ Coming next |
-| Evaluation runs, vendor benchmark and enhancements | – | ⏳ Coming next |
+| Evaluation runs (control, baseline, v1, v2) | – | ✅ Done ([evaluation plan and results](docs/evaluation_plan.md)) |
+| Vendor benchmark and enhancements | – | ⏳ Coming next |
 
 ## ✅ Verified against the source
 
@@ -108,16 +109,17 @@ The data pipeline and analytics dashboard (F1 – F3) are complete and live, and
 | Dataset 2 vs iGA's Table 3 | **179** inconsistent values found in 2022, kept as published and flagged in the dashboard |
 | 2010 headline, derived from iGA's 12-month changes | December 2010 computed two ways agrees to **0.000** points |
 | Dataset 3 version | SHA-256 fingerprint matches the group's copy on every build |
-| Automated tests | **165** passing |
+| Automated tests | **221** (all pass; 8 of them need the prepared documents and are skipped without them) |
 
-The held-out test questions are never run before the final evaluation.
+The 15 held-out test questions were run once, in the final evaluation, after v2 was frozen.
 
 ## 🚀 Quick start
 
 > [!TIP]
 > **Online:** just open the [live app](https://pricelens-bh.streamlit.app). The steps below are for running it on your own computer.
 
-**You need:** Python 3.10 or newer ([python.org](https://www.python.org/downloads/); on Windows tick **"Add python.exe to PATH"**).
+**You need:** Python 3.12 ([python.org](https://www.python.org/downloads/); on Windows tick **"Add python.exe to PATH"**).
+Python 3.12 is what the document search and the evaluation script were run with.
 
 #### 1 · Add Dataset 3 (from the Moodle submission)
 
@@ -128,6 +130,19 @@ data/raw/CPI-Tables-_Jan2020-Oct_2023.xlsx
 ```
 
 Or run `python -m scripts.download_sources` to fetch it from iGA's website (its fingerprint is checked).
+
+#### 1b · Add the documents (from the Moodle submission)
+
+The seven documents (Docs 4 – 10) may not be republished either. Put the PDFs in `data/documents/raw/` and
+Abrar's hand transcriptions (Docs 5, 7, 8) in `data/documents/transcribed/`, with the file names listed in
+[`docs/document_preparation.md`](docs/document_preparation.md). Then build the text and the search passages once:
+
+```bash
+python -m src.documents.prepare      # checks each file's fingerprint and extracts the text
+python -m src.documents.passages     # splits it into passages and builds the search index
+```
+
+The `data/documents/` folder is git-ignored, so none of this is ever committed.
 
 #### 2 · Add the Gemini API key
 
@@ -190,14 +205,51 @@ year in July 2026?"*.
 | **Recorded** | Each answer keeps its tool calls, tokens, response time and settings (`Answer.to_record()`), ready for the query log (F10). |
 
 Design decisions and the settings that v2 may change: [`docs/question_answering.md`](docs/question_answering.md).
-Questions over the documents (F5 – F7) are added by the document team.
+Questions over the documents (F5, F7) and combined questions (F6) use the document search tool: see
+[`docs/document_retrieval.md`](docs/document_retrieval.md).
 
 ## 📏 Evaluation and benchmark
 
-> 🚧 *Results of the control, baseline, v1 and v2 runs, the vendor benchmark and the two enhancements will be added
-> after the evaluation.*
+31 test questions (16 development, 15 held-out), four configurations, the same model (Gemini 3.5 Flash-Lite,
+temperature 0). Held-out questions were run once, after v2 was frozen. Full plan, metrics and failure analysis:
+[`docs/evaluation_plan.md`](docs/evaluation_plan.md). Every answer and score:
+[results workbook](results/IT8413%20-%20Group%20Project%20Test%20Set%20and%20Results%20%28G2%29.xlsx).
 
-<!-- Add the results table and the link to the results spreadsheet here. -->
+**Held-out questions (15)**
+
+| Run | What the model gets | Accuracy | Refusal behaviour | Cost per 1,000 questions | Mean latency |
+|---|---|---|---|---|---|
+| Control | the question only | 20% | 53% | $0.68 | 3.5 s |
+| Baseline | all sources pasted into the prompt | 80% | 80% | $71.28 | 43.7 s |
+| v1 | the app: data tools + document search | 80% | 100% | $4.55 | 5.6 s |
+| **v2** | v1 + search with the user's own question too | **87%** | **100%** | **$4.33** | **4.8 s** |
+
+Cost uses Gemini 3.5 Flash-Lite paid-tier prices ($0.30 input / $2.50 output per 1M tokens, checked 28 Nov 2026).
+The vendor benchmark and the two enhancements will be added here.
+
+<details>
+<summary><b>Running the evaluation yourself</b></summary>
+
+You need the Gemini key (step 2), Dataset 3 (step 1) and the documents (step 1b). Then:
+
+```bash
+python -m scripts.run_evaluation control     # or baseline, v1, v2
+python -m scripts.run_evaluation all         # the four, one after the other
+python -m scripts.run_evaluation v2 --only 3,13   # re-run some questions (e.g. after a rate-limit error)
+```
+
+The questions are read from `results/test_set.csv`. Each run writes:
+
+| File | Holds | In git? |
+|---|---|---|
+| `results/final/<run>.csv` | one row per question, in the column order of the workbook's *Results* sheet | no |
+| `results/final/<run>.jsonl` | the full record: tool calls, retrieved passages, tokens, settings | no (quotes document text) |
+| `results/<run>.jsonl`, `results/<run>_scores.csv` | the same answers in the format of `scripts.failure_analysis` | no |
+
+Copy the CSV rows into the workbook's *Results* sheet and score them there. After scoring,
+`python -m scripts.failure_analysis v1 --testset results/test_set.csv` runs the failure analysis on all questions.
+The held-out questions are part of every run, so use this script only for a final evaluation.
+</details>
 
 ## 📚 Data
 
@@ -227,6 +279,7 @@ dataset **and of the seven documents** used for questions over documents are in 
 
 ```bash
 python -m scripts.check_dev_answers   # development questions that use the data (31 checks)
+python -m scripts.run_evaluation all  # final evaluation, all 31 test questions (see Evaluation)
 python -m scripts.check_against_iga   # our % changes vs iGA's own published % changes
 python -m pytest -q                   # automated tests
 ```
@@ -237,16 +290,19 @@ python -m pytest -q                   # automated tests
 
 ```
 data/raw/          source files (Dataset 3 added locally)
+data/documents/    the seven documents and their prepared text (added locally, git-ignored)
 src/pipeline/      data loading, preparation, calculations and the model's tools
 src/dashboard/     Streamlit dashboard: filters, charts and the "Ask a question" tab
 src/qa/            questions over the data: Gemini, prompt, settings and the number check
-scripts/           result checks, Dataset 3 download, sources record
+src/documents/     document preparation, passages, search and citations
+src/evaluation/    test set reader and failure analysis
+scripts/           result checks, evaluation runs, Dataset 3 download, sources record
+results/           test set, results workbook, development-run scores
 tests/             automated tests
 docs/              data preparation, quality report, sources, images
 run_app.bat/.sh    one-click start
 ```
 
-<!-- Add the folder for the document part here. -->
 </details>
 
 ## 👥 Team

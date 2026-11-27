@@ -23,3 +23,11 @@ data/raw/*.xlsx
 data/processed/
 #keep run logs with MOIC text out of the repo
 results/*.jsonl
+
+# Final evaluation runs (scripts/run_evaluation.py): full records quote MOIC document text.
+# The answers and scores are kept in the results workbook instead.
+results/final/
+results/control_scores.csv
+results/baseline_scores.csv
+results/v1_scores.csv
+results/v2_scores.csv
