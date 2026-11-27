@@ -66,6 +66,20 @@ def render() -> str:
                      f"[{doc['terms']}]({doc['terms_url']}) |")
     lines += [
         "",
+        "### Document files and fingerprints",
+        "",
+        "The exact copies the passages and the test-set answers were taken from. "
+        "`python -m scripts.download_sources` checks each file against its SHA-256.",
+        "",
+        "| # | File in `data/documents/raw/` | Version | Pages used | SHA-256 |",
+        "|---|---|---|---|---|",
+    ]
+    from src.documents.config import DOCUMENTS as DOC_FILES
+    for d in DOC_FILES:
+        pages = f"pp. {d.pages[0]}-{d.pages[-1]}" if len(d.pages) > 1 else f"p. {d.pages[0]}"
+        lines.append(f"| {d.id} | `{d.file}` | {d.version} | PDF {pages} | `{d.sha256}` |")
+    lines += [
+        "",
         "**What the terms allow.** Datasets 1-2: copying, adapting and using the data in applications, with the "
         "statement above and the extraction date (licence clause 3). Dataset 3 and documents 4-10: iGA's and "
         "MOIC's website terms do not allow republishing without written permission, so these files are used "

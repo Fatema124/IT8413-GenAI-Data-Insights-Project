@@ -11,6 +11,12 @@ not committed; this script fetches it from iGA instead (proposal Section 2,
 After downloading, the file is fingerprinted (SHA-256) and compared with the
 copy the group used, so a changed file on iGA's site is reported, not
 silently used.
+
+Documents 4-10 (MOIC and iGA terms of use) are not committed either. Each one
+is looked for in data/documents/raw/ and its SHA-256 compared with the copy
+the test-set answers were taken from (src/documents/config.py). Doc 10 has a
+direct link and is downloaded; Docs 4-9 sit behind MOIC/iGA listing pages, so
+the script says where to get each one and under which file name to save it.
 """
 from __future__ import annotations
 
@@ -86,8 +92,62 @@ def ensure_dataset3(verbose: bool = True) -> tuple[bool, str]:
     return True, "downloaded"
 
 
+# Documents 4-10: direct file links, where the publisher gives a stable one.
+DOCUMENT_URLS = {10: "https://moic.gov.bh/sites/default/files/2021-09/Know%20your%20right.pdf"}
+
+
+def _document_page(n: int) -> str:
+    """The listing page from docs/sources.md (src/pipeline/config.py) for document n."""
+    return next(d["url"] for d in config.DOCUMENTS if d["n"] == n)
+
+
+def ensure_documents(verbose: bool = True) -> dict[int, str]:
+    """Check Documents 4-10 in data/documents/raw/; download Doc 10, explain the others.
+
+    Returns {document number: "same" | "different" | "downloaded" | "missing" | "failed"}.
+    A file with a different fingerprint is kept but reported: the passages and the
+    test-set answers were made from the group's copy.
+    """
+    from src.documents.config import DOCUMENTS, RAW_DIR
+    say = print if verbose else (lambda *a, **k: None)
+    status: dict[int, str] = {}
+    for doc in DOCUMENTS:
+        target = RAW_DIR / doc.file
+        say(f"Document {doc.id} ({doc.short}) -> {target}")
+        if not target.exists() and doc.id in DOCUMENT_URLS:
+            try:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                req = urllib.request.Request(DOCUMENT_URLS[doc.id], headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    target.write_bytes(resp.read())
+                say(f"  Downloaded {target.stat().st_size:,} bytes.")
+                status[doc.id] = "downloaded"
+            except Exception as exc:          # network blocked, site down, moved file ...
+                target.unlink(missing_ok=True)
+                say(f"  Download failed: {exc}")
+                status[doc.id] = "failed"
+        if not target.exists():
+            say(f"  Missing. Download '{doc.title}' ({doc.version}) from\n"
+                f"  {_document_page(doc.id)}\n  and save it as {target}")
+            status.setdefault(doc.id, "missing")
+            continue
+        if sha256(target) == doc.sha256:
+            say("  Same version as the group's copy (SHA-256 matches).")
+            status[doc.id] = "same" if status.get(doc.id) != "downloaded" else "downloaded"
+        else:
+            say("  WARNING: the file differs from the group's copy (SHA-256). "
+                "Prepare it again and run scripts.check_retrieval_dev before using it.")
+            status[doc.id] = "different"
+    return status
+
+
 def main() -> int:
     ok, _ = ensure_dataset3()
+    print()
+    docs = ensure_documents()
+    ready = sum(v in ("same", "downloaded") for v in docs.values())
+    print(f"\nDocuments ready: {ready}/{len(docs)}. Then: python -m src.documents.prepare "
+          "and python -m src.documents.passages")
     return 0 if ok else 1
 
 

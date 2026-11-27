@@ -35,4 +35,18 @@ Used for questions over the documents (F5), as approved in the proposal. Per the
 | 9 | Consumer Price Index, September 2023: monthly release with methodology (10 pp., released 30/10/2023); latest release listed on iGA's Statistical Publications page as of 27/10/2026 | Information & eGovernment Authority (iGA) | [link](https://www.iga.gov.bh/en/category/statistical-publications) (Economic Statistics, Consumer Price Index) | 27/10/2026 | [iGA website Terms of Use](https://www.iga.gov.bh/en/article/terms-of-use) |
 | 10 | Know Your Right (إعرف حقك): published guidance for consumers and retailers on Law No. 35 of 2012 and its regulation. Bilingual leaflet, 12 pp., file dated 12/12/2016, issued under the Ministry's former name; it predates Law No. 28 of 2026 | Consumer Protection Directorate, Ministry of Industry, Commerce and Tourism (now MOIC) | [link](https://moic.gov.bh/sites/default/files/2021-09/Know%20your%20right.pdf) | 10/11/2026 | [MOIC website Terms of Use](https://moic.gov.bh/en/node/2671) |
 
+### Document files and fingerprints
+
+The exact copies the passages and the test-set answers were taken from. `python -m scripts.download_sources` checks each file against its SHA-256.
+
+| # | File in `data/documents/raw/` | Version | Pages used | SHA-256 |
+|---|---|---|---|---|
+| 4 | `Law_35_2012_Consumer_Protection.pdf` | 2012 text, translation scanned 24/03/2013 | PDF pp. 1-14 | `59ef8a250ba3f2b4c0e1b2e1b9fb676c9ea686f4bfb667bfcb922fc970567762` |
+| 5 | `Law_28_2026_Amendment.pdf` | Official Gazette No. 3889, 18/06/2026, pp. 34-36 | PDF pp. 1-3 | `3d7a39ea43cbf0e6e54fafec6f5fafabb26be98adb0f4d708f2c088843d3171f` |
+| 6 | `Executive_Regulation_Law_35_2012.pdf` | Official Gazette No. 3165, 17/07/2014, pp. 11-27 | PDF pp. 1-17 | `59c50dcb074ee4662076a13ecb03461a8356ca59c99bb1e4aca6036a5d4b7d58` |
+| 7 | `Ministerial_Order_51_2007.pdf` | Official Gazette No. 2807, 06/09/2007, pp. 10-12 | PDF pp. 1-3 | `7d1161985bcf0358ae5a875c4cf0c98fb0f501a212e072066b2e367a06177ce4` |
+| 8 | `Ministerial_Order_14_2008.pdf` | Official Gazette No. 2833, 06/03/2008, p. 7 | PDF p. 1 | `add5dfad352d5886e066eef604bc2ec937ca0c85b5f1750babdba01251134e6b` |
+| 9 | `CPI_Sep_2023.pdf` | released 30/10/2023 | PDF pp. 3-10 | `bd61bf9d3ffd8e46039ef15e9130a4813bae357a333e963e04edec8ab016d574` |
+| 10 | `Know_your_right.pdf` | file dated 12/12/2016 | PDF pp. 7-10 | `7c8822c295a2e3d6740098f67fff2cbafcc8c99bbe0b18f717ae98ba29eff136` |
+
 **What the terms allow.** Datasets 1-2: copying, adapting and using the data in applications, with the statement above and the extraction date (licence clause 3). Dataset 3 and documents 4-10: iGA's and MOIC's website terms do not allow republishing without written permission, so these files are used only inside the tool, with citation, and are not committed to the repository.
