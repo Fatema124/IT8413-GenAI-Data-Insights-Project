@@ -129,6 +129,11 @@ was in its prompt is counted under category 2 ("the right text was given and the
 **What the results show.**
 - **The control** answers from general knowledge: mostly generic or non-Bahraini rules and no figures from the
   datasets, so nothing it says is grounded in our sources.
+- **Training-data exposure (brief 4.3).** The control answered only **1 of the 25 answerable questions**
+  correctly (Q25, a general consumer-rights point) and gave **no correct figure** from the datasets. Its other
+  5 correct scores are refusals of unanswerable questions, where it cited its knowledge cutoff rather than the
+  sources. So the model had not memorised our sources: a correct answer from v1 or v2 comes from the tool's
+  retrieval and computation, not from training data.
 - **The baseline** gets most document questions right, but it declines data questions even though the numbers
   were in its prompt (it does not compute year-on-year changes or annual averages from a long table). Placing
   every source in the prompt makes it about 16 – 21 times as expensive as v1 and v2, and about 8 – 20 times as slow.
@@ -149,6 +154,9 @@ was in its prompt is counted under category 2 ("the right text was given and the
 - Answers were scored by the group with AI assistance, not by independent judges.
 - Even at temperature 0 the model does not always give the same answer twice (for example the way it cites).
 - Costs use the published paid price on 28 Nov 2026; prices change.
+- v1 and v2 were run on the answering features (F4 – F8). The report export (F9) and the query log file (F10)
+  were not finished at the time of the runs; they do not change how an answer is produced, but the brief
+  defines v1 as the tool with all 10 features, so this is recorded here.
 
 ## 8 · Reproducing the runs
 
